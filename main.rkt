@@ -1,4 +1,5 @@
 #lang racket/base
+(require (file "private/cross.rkt"))
 
 ;; Notice
 ;; To install (from within the package directory):
@@ -36,7 +37,7 @@
   (define (createConnector hostname port)
     (tcp-connect/enable-break hostname port)))
 
-(module* parallel racket/base
+(module* parallel #f
   (require (only-in racket/place place* place-channel-get place-channel-put)
            (only-in file/gzip gzip-through-ports)
            (only-in file/gunzip gunzip-through-ports))
@@ -59,7 +60,7 @@
         (flush-output out)
         (loop)))))
 
-(module* main racket/base
+(module* main #f
 
   (require (submod ".." listener)
            (submod ".." connector)
