@@ -103,8 +103,10 @@
     (define mode (getMode))
     (define port (getPort))
     (define hostname (getHostname mode))
-    (parameterize ([current-custodian (make-custodian)])
-      (with-handlers ([exn:fail? (lambda (exn) (custodian-shutdown-all (current-custodian)))])
+    (parameterize ([current-custodian (make-custodian)]
+                   [break-enabled #t])
+      (with-handlers ([exn:fail? (lambda (exn) (custodian-shutdown-all (current-custodian)))]
+                      [exn:break? (lambda (exn) (custodian-shutdown-all (current-custodian)))])
         (define-values (in out)
           (cond [(string-ci=? mode "Accept") (createListener port hostname)]
                 [else (createConnector hostname port)]))
