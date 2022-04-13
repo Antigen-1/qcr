@@ -7,4 +7,4 @@
 
 @defmodule[qcr]
 
-Package Description Here
+A small chat room for my friends.
