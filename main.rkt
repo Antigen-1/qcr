@@ -46,7 +46,7 @@
   (define (runParallel in out name)
     (let-values (((pl i o e) (place* #:in #f #:out (current-output-port) #:err #f ch
                                      (define in (place-channel-get ch))
-                                     (define name (place-channel-get ch))
+                                     (define name (read-bytes-line in))
                                      (let loop ()
                                        (let ((bytes-port (open-output-bytes)))
                                          (gunzip-through-ports in bytes-port)
@@ -56,10 +56,10 @@
                                          (display #\newline))
                                        (loop)))))
       (place-channel-put pl in)
-      (place-channel-put pl name)
+      (displayln name out)
       (displayln "You can Chat now.")
       (let loop ()
-        (gzip-through-ports (open-input-bytes (read-bytes-line (current-input-port))) out #f 0)
+        (gzip-through-ports (open-input-bytes (read-bytes-line)) out #f 0)
         (flush-output out)
         (loop)))))
 
