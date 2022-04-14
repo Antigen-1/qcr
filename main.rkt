@@ -111,4 +111,4 @@
           (cond [(string-ci=? mode "Accept") (createListener port hostname)]
                 [else (createConnector hostname port)]))
         (displayln "Connect Successfully.")
-        (runParallel in out)))))
+        (runParallel in out name)))))
