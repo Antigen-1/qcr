@@ -51,7 +51,7 @@
   (define (handleIO in-in out name)
     (let loop ()
       (define syn (sync in-in (read-line-evt)))
-      (cond ((input-port? syn) (gunzip-through-ports syn (current-output-port)) (newline))
+      (cond ((input-port? syn) (gunzip-through-ports syn (current-output-port)) (newline) (flush-output (current-output-port)))
             ((string? syn) (gzip-through-ports (open-input-string (apply format "~a>:~a<~a:~a:~a,~a>" name syn (getTime))) out #f 0)
                            (flush-output out)))
       (loop)))
