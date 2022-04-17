@@ -37,12 +37,50 @@
   (define (createConnector hostname port)
     (tcp-connect/enable-break hostname port)))
 
+(module extension racket/base
+  (require (for-syntax racket/base)
+           (only-in racket/block block))
+  (provide (struct-out message) handleInput)
+
+  (struct message (name content hour minute second timezone))
+  (define (stream->message stream)
+    (with-handlers ((exn:fail:contract? (lambda (exn) #f)))
+      (apply message (cdr (regexp-match #rx"(?-m:^[[]:message:(.*)>:(.*)<([0-9]*):([0-9]*):([0-9]*),(.*)>[]]$)" stream)))))
+  (define (message-out message) (format "~a>:~a<~a:~a:~a,~a>"
+                                        (message-name message)
+                                        (message-content message)
+                                        (message-hour message)
+                                        (message-minute message)
+                                        (message-second message)
+                                        (message-timezone message)))
+  (define (message->stream message) (format "[:message:~a]" (message-out message)))
+
+  ;;TODO
+
+  (begin-for-syntax
+    (define (generate object)
+      #`(cond [(or (stream->message #,object) (message? #,object)) (values stream->message message->stream message-out)]
+              [else (values #f #f #f)])))
+  (define-syntax (handleInput stx)
+    (syntax-case stx ()
+      ((_ object) #`(block
+                     (define-values (stream->structure structure->stream structure-out) #,(generate #'object))
+                     (if (and stream->structure structure->stream structure-out)
+                         (cond ((stream->structure object)
+                                ;;TCP INPUT
+                                => structure-out)
+                               ((struct? object)
+                                ;;CURRENT INPUT
+                                (structure->stream object)))
+                         object))))))
+
 (module* parallel #f
   (require (only-in racket/place place* place-channel-get place-channel-put)
            (only-in file/gzip gzip-through-ports)
            (only-in file/gunzip gunzip-through-ports)
            (only-in racket/date current-date)
-           (only-in racket/port copy-port))
+           (only-in racket/port copy-port)
+           (submod ".." extension))
   (provide runParallel)
 
   (define (getTime)
@@ -51,8 +89,11 @@
   (define (handleIO in-in out name)
     (let loop ()
       (define syn (sync in-in (read-line-evt)))
-      (cond ((input-port? syn) (gunzip-through-ports syn (current-output-port)) (newline) (flush-output (current-output-port)))
-            ((string? syn) (gzip-through-ports (open-input-string (apply format "~a>:~a<~a:~a:~a,~a>" name syn (getTime))) out #f 0)
+      (cond ((input-port? syn) (define string-port (open-output-string))
+                               (gunzip-through-ports syn string-port)
+                               (displayln (handleInput (get-output-string string-port)))
+                               (flush-output (current-output-port)))
+            ((string? syn) (gzip-through-ports (open-input-string (handleInput (apply message name syn (getTime)))) out #f 0)
                            (flush-output out)))
       (loop)))
   (define (runParallel in out name)
