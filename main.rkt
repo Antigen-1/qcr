@@ -59,17 +59,17 @@
 
   (begin-for-syntax
     (define (generate object)
-      #`(cond [(or (stream->message #,object) (message? #,object)) (values stream->message message->stream message-out)]
-              [else (values #f #f #f)])))
+      #`(cond [(or (stream->message #,object) (message? #,object)) (values stream->message message->stream message-out message?)]
+              [else (values #f #f #f #f)])))
   (define-syntax (handleInput stx)
     (syntax-case stx ()
       ((_ object) #`(block
-                     (define-values (stream->structure structure->stream structure-out) #,(generate #'object))
-                     (if (and stream->structure structure->stream structure-out)
+                     (define-values (stream->structure structure->stream structure-out structure?) #,(generate #'object))
+                     (if (and stream->structure structure->stream structure-out structure?)
                          (cond ((stream->structure object)
                                 ;;TCP INPUT
                                 => structure-out)
-                               ((struct? object)
+                               ((structure? object)
                                 ;;CURRENT INPUT
                                 (structure->stream object)))
                          object))))))
