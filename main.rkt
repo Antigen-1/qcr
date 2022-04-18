@@ -120,7 +120,7 @@
                                                     (define path (string->some-system-path (substring syn 5) (system-type 'os)))
                                                     (with-handlers ((exn:fail:filesystem? (lambda (exn) (apply message name "error" (getTime)))))
                                                       (file (path->string (let-values (((base name bool) (split-path path)))
-                                                                            base))
+                                                                            name))
                                                             (file->bytes path)
                                                             #f #f #f #f)))
                                                    (else (apply message name syn (getTime)))))) out #f 0)
