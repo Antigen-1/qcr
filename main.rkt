@@ -46,7 +46,7 @@
   (struct message (name content hour minute second timezone))
   (define (stream->message stream)
     (with-handlers ((exn:fail:contract? (lambda (exn) #f)))
-      (apply message (cdr (regexp-match #rx"(?-m:^[[]:message:(.*)>:(.*)<([0-9]*):([0-9]*):([0-9]*),(.*)>[]]$)" stream)))))
+      (apply message (cdr (regexp-match #rx"^[[]:message:(.*?)>:(.*?)<([0-9]*?):([0-9]*?):([0-9]*?),(.*?)>[]]$" stream)))))
   (define (message-out message) (format "~a>:~a<~a:~a:~a,~a>"
                                         (message-name message)
                                         (message-content message)
@@ -59,7 +59,7 @@
   (struct file message ())
   (define (stream->file stream)
     (with-handlers ((exn:fail:contract? (lambda (exn) #f)))
-      (apply file (append (cdr (regexp-match #rx"(?-m:^[[]:file:(.*)>:(.*)[]]$)" stream)) #f #f #f #f))))
+      (apply file (append (cdr (regexp-match #rx"^[[]:file:(.*?)>:(.*?)[]]$" stream)) (list #f #f #f #f)))))
   (define (file-out file)
     (display "Download?[y/n]:")
     (cond [(string-ci=? (read-line) "y")
