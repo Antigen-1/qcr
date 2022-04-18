@@ -64,8 +64,7 @@
     (display "Download?[y/n]:")
     (cond [(string-ci=? (read-line) "y")
            (with-handlers ((exn:fail:filesystem? (lambda (exn) (void))))
-             (make-directory (string->path "file")))
-           (file-or-directory-permissions (string->path "file") #o200)
+             (make-directory (string->path "file") #o200))
            (display-to-file (message-content file) (path-join (current-directory) "file" (message-name file)) #:exists 'truncate/replace)
            "Successful"]
           [else "Cancelled"]))
