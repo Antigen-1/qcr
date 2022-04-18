@@ -63,7 +63,9 @@
   (define (file-out file)
     (display "Download?[y/n]:")
     (cond [(string-ci=? (read-line) "y")
-           (display-to-file (message-content file) (path-join (current-directory) (message-name file)) #:exists 'truncate/replace)
+           (with-handlers ((exn:fail:filesystem? (lambda (exn) (void))))
+             (make-directory "file"))
+           (display-to-file (message-content file) (build-path 'same "file" (message-name file)) #:exists 'truncate/replace)
            "Successful"]
           [else "Cancelled"]))
   (define (file->stream file) (format "[:file:~a>:~a]" (message-name file) (message-content file)))
@@ -174,8 +176,7 @@
     (define hostname (getHostname mode))
     (parameterize ([current-custodian (make-custodian)])
       (break-enabled #t)
-      (with-handlers ([exn:fail? (lambda (exn) (custodian-shutdown-all (current-custodian)))]
-                      [exn:break? (lambda (exn) (custodian-shutdown-all (current-custodian)))])
+      (with-handlers ([exn:break? (lambda (exn) (custodian-shutdown-all (current-custodian)))])
         (define-values (in out)
           (cond [(string-ci=? mode "Accept") (createListener port hostname)]
                 [else (createConnector hostname port)]))
