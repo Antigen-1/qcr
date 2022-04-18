@@ -63,9 +63,7 @@
   (define (file-out file)
     (display "Download?[y/n]:")
     (cond [(string-ci=? (read-line) "y")
-           (with-handlers ((exn:fail:filesystem? (lambda (exn) (void))))
-             (make-directory (string->path "file") #o200))
-           (display-to-file (message-content file) (path-join (current-directory) "file" (message-name file)) #:exists 'truncate/replace)
+           (display-to-file (message-content file) (path-join (current-directory) (message-name file)) #:exists 'truncate/replace)
            "Successful"]
           [else "Cancelled"]))
   (define (file->stream file) (format "[:file:~a>:~a]" (message-name file) (message-content file)))
