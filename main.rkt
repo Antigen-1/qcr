@@ -97,7 +97,7 @@
            (only-in file/gunzip gunzip-through-ports)
            (only-in racket/string string-prefix?)
            (only-in racket/file file->bytes)
-           (only-in racket/path file-name-from-path)
+           (only-in racket/path string->some-system-path)
            (only-in racket/date current-date)
            (only-in racket/port copy-port)
            (submod ".." extension))
@@ -117,9 +117,10 @@
                                                 (handleInput
                                                  (cond
                                                    ((string-prefix? syn "file>")
-                                                    (define path (string->path (substring syn 5)))
+                                                    (define path (string->some-system-path (substring syn 5) (system-type 'os)))
                                                     (with-handlers ((exn:fail:filesystem? (lambda (exn) (apply message name "error" (getTime)))))
-                                                      (file (path->string (file-name-from-path path))
+                                                      (file (path->string (let-values (((base name bool) (split-path path)))
+                                                                            base))
                                                             (file->bytes path)
                                                             #f #f #f #f)))
                                                    (else (apply message name syn (getTime)))))) out #f 0)
