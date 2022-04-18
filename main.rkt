@@ -37,10 +37,11 @@
   (define (createConnector hostname port)
     (tcp-connect/enable-break hostname port)))
 
-(module extension racket/base
+(module* extension #f
   (require (for-syntax racket/base)
-           (only-in racket/block block))
-  (provide (struct-out message) handleInput)
+           (only-in racket/block block)
+           (only-in racket/file display-to-file))
+  (provide (struct-out message) (struct-out file) handleInput)
 
   (struct message (name content hour minute second timezone))
   (define (stream->message stream)
@@ -55,12 +56,28 @@
                                         (message-timezone message)))
   (define (message->stream message) (format "[:message:~a]" (message-out message)))
 
+  (struct file message ())
+  (define (stream->file stream)
+    (with-handlers ((exn:fail:contract? (lambda (exn) #f)))
+      (apply file (append (cdr (regexp-match #rx"(?-m:^[[]:file:(.*)>:(.*)[]]$)" stream)) #f #f #f #f))))
+  (define (file-out file)
+    (display "Download?[y/n]:")
+    (cond [(string-ci=? (read-line) "y")
+           (with-handlers ((exn:fail:filesystem? (lambda (exn) (void))))
+             (make-directory (string->path "file")))
+           (display-to-file (message-content file) (path-join "file" (message-name file)) #:exists 'truncate/replace)
+           "Successful"]
+          [else "Cancelled"]))
+  (define (file->stream file) (format "[:file:~a>:~a]" (message-name file) (message-content file)))
+
   ;;TODO
 
   (begin-for-syntax
     (define (generate object)
-      #`(cond [(or (stream->message #,object) (message? #,object)) (values stream->message message->stream message-out message?)]
-              [else (values #f #f #f #f)])))
+      #`(cond
+          [(or (stream->file #,object) (file? #,object)) (values stream->file file->stream file-out file?)]
+          [(or (stream->message #,object) (message? #,object)) (values stream->message message->stream message-out message?)]
+          [else (values #f #f #f #f)])))
   (define-syntax (handleInput stx)
     (syntax-case stx ()
       ((_ object) #`(block
@@ -78,6 +95,8 @@
   (require (only-in racket/place place* place-channel-get place-channel-put)
            (only-in file/gzip gzip-through-ports)
            (only-in file/gunzip gunzip-through-ports)
+           (only-in racket/string string-prefix?)
+           (only-in racket/path file-name-from-path)
            (only-in racket/date current-date)
            (only-in racket/port copy-port)
            (submod ".." extension))
@@ -93,7 +112,15 @@
                                (gunzip-through-ports syn string-port)
                                (displayln (handleInput (get-output-string string-port)))
                                (flush-output (current-output-port)))
-            ((string? syn) (gzip-through-ports (open-input-string (handleInput (apply message name syn (getTime)))) out #f 0)
+            ((string? syn) (gzip-through-ports (open-input-string
+                                                (handleInput
+                                                 (cond
+                                                   ((string-prefix? syn "file>")
+                                                    (define path (substring syn 5))
+                                                    (file (path->string (file-name-from-path path))
+                                                          (file->bytes path)
+                                                          #f #f #f #f))
+                                                   (else (apply message name syn (getTime)))))) out #f 0)
                            (flush-output out)))
       (loop)))
   (define (runParallel in out name)
@@ -113,10 +140,10 @@
 
 
   (define (getName) (let ()
-                      (display "name:\n")
+                      (display "name:")
                       (read-line)))
   (define (getMode) (let ()
-                      (display "mode [Accept/Connect]:\n")
+                      (display "mode [Accept/Connect]:")
                       (read-line)))
   (define (getPort)
     (let ()
