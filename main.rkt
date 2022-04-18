@@ -117,10 +117,10 @@
                                                 (handleInput
                                                  (cond
                                                    ((string-prefix? syn "file>")
-                                                    (define path (substring syn 5))
+                                                    (define path (string->path (substring syn 5)))
                                                     (with-handlers ((exn:fail:filesystem? (lambda (exn) (apply message name "error" (getTime)))))
                                                       (file (path->string (file-name-from-path path))
-                                                            (file->bytes (string->path path))
+                                                            (file->bytes path)
                                                             #f #f #f #f)))
                                                    (else (apply message name syn (getTime)))))) out #f 0)
                            (flush-output out)))
