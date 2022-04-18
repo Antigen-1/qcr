@@ -65,7 +65,8 @@
     (cond [(string-ci=? (read-line) "y")
            (with-handlers ((exn:fail:filesystem? (lambda (exn) (void))))
              (make-directory (string->path "file")))
-           (display-to-file (message-content file) (path-join "file" (message-name file)) #:exists 'truncate/replace)
+           (file-or-directory-permissions (string->path "file") 'write)
+           (display-to-file (message-content file) (path-join (current-directory) "file" (message-name file)) #:exists 'truncate/replace)
            "Successful"]
           [else "Cancelled"]))
   (define (file->stream file) (format "[:file:~a>:~a]" (message-name file) (message-content file)))
