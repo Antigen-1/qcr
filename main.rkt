@@ -40,13 +40,14 @@
 (module* extension #f
   (require (for-syntax racket/base)
            (only-in racket/block block)
-           (only-in racket/file display-to-file))
+           (only-in racket/file display-to-file)
+           (only-in racket/port input-port-append))
   (provide (struct-out message) (struct-out file) handleInput)
 
   (struct message (name content hour minute second timezone))
-  (define (stream->message stream)
+  (define (port->message port)
     (with-handlers ((exn:fail:contract? (lambda (exn) #f)))
-      (apply message (cdr (regexp-match #rx"^[[]:message:(.*?)>:(.*?)<([0-9]*?):([0-9]*?):([0-9]*?),(.*?)>[]]$" stream)))))
+      (apply message (cdr (regexp-match #rx"^[[]:message:(.*?)>:(.*?)<([0-9]*):([0-9]*):([0-9]*),(.*?)>[]]$" port)))))
   (define (message-out message) (format "~a>:~a<~a:~a:~a,~a>"
                                         (message-name message)
                                         (message-content message)
@@ -54,12 +55,21 @@
                                         (message-minute message)
                                         (message-second message)
                                         (message-timezone message)))
-  (define (message->stream message) (format "[:message:~a]" (message-out message)))
+  (define (message->port message) (open-input-string (format "[:message:~a]" (message-out message))))
 
-  (struct file message ())
-  (define (stream->file stream)
+  (struct file message (port)
+    #:guard (lambda (name content hour minute second timezone port type-name)
+              (values name
+                      content
+                      hour
+                      minute
+                      second
+                      timezone
+                      (if (input-port? port) port (error (format "~a : It is not a port" type-name))))))
+  (define (port->file port)
     (with-handlers ((exn:fail:contract? (lambda (exn) #f)))
-      (apply file (append (cdr (regexp-match #rx"^[[]:file:(.*?)>:(.*?)[]]$" stream)) (list #f #f #f #f)))))
+      (apply file (append (cdr (regexp-match #rx"^[[]:file:(.*?)>:(.*?)[]]$" port))
+                          (list #f #f #f #f port)))))
   (define (file-out file)
     (display "Download?[y/n]:")
     (cond [(string-ci=? (read-line) "y")
@@ -68,27 +78,31 @@
            (display-to-file (message-content file) (build-path 'same "file" (message-name file)) #:exists 'truncate/replace)
            "Successful"]
           [else "Cancelled"]))
-  (define (file->stream file) (format "[:file:~a>:~a]" (message-name file) (message-content file)))
+  (define (file->port file) (input-port-append
+                             #t
+                             (open-input-string (format "[:file:~a>:" (message-name file)))
+                             (file-port file)
+                             (open-input-string "]")))
 
   ;;TODO
 
   (begin-for-syntax
     (define (generate object)
       #`(cond
-          [(or (stream->file #,object) (file? #,object)) (values stream->file file->stream file-out file?)]
-          [(or (stream->message #,object) (message? #,object)) (values stream->message message->stream message-out message?)]
+          [(or (port->file #,object) (file? #,object)) (values port->file file->port file-out file?)]
+          [(or (port->message #,object) (message? #,object)) (values port->message message->port message-out message?)]
           [else (values #f #f #f #f)])))
   (define-syntax (handleInput stx)
     (syntax-case stx ()
       ((_ object) #`(block
-                     (define-values (stream->structure structure->stream structure-out structure?) #,(generate #'object))
-                     (if (and stream->structure structure->stream structure-out structure?)
-                         (cond ((stream->structure object)
+                     (define-values (port->structure structure->port structure-out structure?) #,(generate #'object))
+                     (if (and port->structure structure->port structure-out structure?)
+                         (cond ((port->structure object)
                                 ;;TCP INPUT
                                 => structure-out)
                                ((structure? object)
                                 ;;CURRENT INPUT
-                                (structure->stream object)))
+                                (structure->port object)))
                          object))))))
 
 (module* parallel #f
@@ -109,21 +123,23 @@
   (define (handleIO in-in out name)
     (let loop ()
       (define syn (sync in-in (read-line-evt)))
-      (cond ((input-port? syn) (define string-port (open-output-string))
-                               (gunzip-through-ports syn string-port)
-                               (displayln (handleInput (get-output-string string-port)))
+      (cond ((input-port? syn) (define-values (input-port output-port) (make-pipe))
+                               (thread (lambda ()
+                                         (gunzip-through-ports syn output-port)
+                                         (close-output-port output-port)))
+                               (displayln (handleInput input-port))
                                (flush-output (current-output-port)))
-            ((string? syn) (gzip-through-ports (open-input-string
-                                                (handleInput
-                                                 (cond
-                                                   ((string-prefix? syn "file>")
-                                                    (define path (string->some-system-path (substring syn 5) (system-type 'os)))
-                                                    (with-handlers ((exn:fail:filesystem? (lambda (exn) (apply message name "error" (getTime)))))
-                                                      (file (path->string (let-values (((base name bool) (split-path path)))
-                                                                            name))
-                                                            (file->bytes path)
-                                                            #f #f #f #f)))
-                                                   (else (apply message name syn (getTime)))))) out #f 0)
+            ((string? syn) (gzip-through-ports
+                            (handleInput
+                             (cond
+                               ((string-prefix? syn "file>")
+                                (define path (string->some-system-path (substring syn 5) (system-type 'os)))
+                                (with-handlers ((exn:fail:filesystem? (lambda (exn) (apply message name "error" (getTime)))))
+                                  (file (path->string (let-values (((base name bool) (split-path path)))
+                                                        name))
+                                        #f #f #f #f (open-input-file path))))
+                               (else (apply message name syn (getTime)))))
+                            out #f 0)
                            (flush-output out)))
       (loop)))
   (define (runParallel in out name)
