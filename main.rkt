@@ -39,23 +39,27 @@
 
 (module* extension #f
   (require (for-syntax racket/base)
-           (only-in racket/block block)
            (only-in racket/file display-to-file)
-           (only-in racket/port input-port-append))
+           (only-in racket/port input-port-append)
+           (only-in racket/generic define-generics))
   (provide (struct-out message) (struct-out file) handleInput)
 
-  (struct message (name content hour minute second timezone))
+  (define-generics structure
+    (structure->port structure)
+    (structure-out structure))
+
+  (struct message (name content hour minute second timezone)
+    #:methods gen:structure [(define (structure-out message) (format "~a>:~a<~a:~a:~a,~a>"
+                                                                     (message-name message)
+                                                                     (message-content message)
+                                                                     (message-hour message)
+                                                                     (message-minute message)
+                                                                     (message-second message)
+                                                                     (message-timezone message)))
+                             (define (structure->port message) (open-input-string (format "[:message:~a]" (structure-out message))))])
   (define (port->message port)
     (with-handlers ((exn:fail:contract? (lambda (exn) #f)))
       (apply message (cdr (regexp-match-peek #rx#"^[[]:message:(.*?)>:(.*?)<([0-9]*):([0-9]*):([0-9]*),(.*?)>[]]$" port)))))
-  (define (message-out message) (format "~a>:~a<~a:~a:~a,~a>"
-                                        (message-name message)
-                                        (message-content message)
-                                        (message-hour message)
-                                        (message-minute message)
-                                        (message-second message)
-                                        (message-timezone message)))
-  (define (message->port message) (open-input-string (format "[:message:~a]" (message-out message))))
 
   (struct file (name content port)
     #:guard (lambda (name content port type-name)
@@ -64,44 +68,42 @@
                       (cond [(input-port? port) port]
                             [(path? content) (open-input-file content)]
                             [(or (string? content) (bytes? content)) #f]
-                            [else (error (format "~a error : port field" type-name))]))))
+                            [else (error (format "~a error : port field" type-name))])))
+    #:methods gen:structure [(define (structure-out file)
+                               (display "Download?[y/n]:")
+                               (cond [(string-ci=? (read-line) "y")
+                                      (with-handlers ((exn:fail:filesystem? (lambda (exn) (void))))
+                                        (make-directory "file"))
+                                      (display-to-file (file-content file) (build-path 'same "file" (bytes->string/utf-8 (file-name file))) #:exists 'truncate/replace)
+                                      "Successful"]
+                                     [else "Cancelled"]))
+                             (define (structure->port file) (input-port-append
+                                                             #t
+                                                             (open-input-string (format "[:file:~a>:" (file-name file)))
+                                                             (file-port file)
+                                                             (open-input-string "]")))])
   (define (port->file port)
     (with-handlers ((exn:fail:contract? (lambda (exn) #f)))
       (apply file `(,@(cdr (regexp-match-peek #rx#"^[[]:file:(.*?)>:(.*?)[]]$" port)) #f))))
-  (define (file-out file)
-    (display "Download?[y/n]:")
-    (cond [(string-ci=? (read-line) "y")
-           (with-handlers ((exn:fail:filesystem? (lambda (exn) (void))))
-             (make-directory "file"))
-           (display-to-file (file-content file) (build-path 'same "file" (bytes->string/utf-8 (file-name file))) #:exists 'truncate/replace)
-           "Successful"]
-          [else "Cancelled"]))
-  (define (file->port file) (input-port-append
-                             #t
-                             (open-input-string (format "[:file:~a>:" (file-name file)))
-                             (file-port file)
-                             (open-input-string "]")))
 
   ;;TODO
 
-  (begin-for-syntax
-    (define (generate object)
-      #`(cond
-          [(or (port->file #,object) (file? #,object)) (values port->file file->port file-out file?)]
-          [(or (port->message #,object) (message? #,object)) (values port->message message->port message-out message?)]
-          [else (values #f #f #f #f)])))
   (define-syntax (handleInput stx)
     (syntax-case stx ()
-      ((_ object) #`(block
-                     (define-values (port->structure structure->port structure-out structure?) #,(generate #'object))
-                     (if (and port->structure structure->port structure-out structure?)
-                         (cond ((port->structure object)
-                                ;;TCP INPUT
-                                => structure-out)
-                               ((structure? object)
-                                ;;CURRENT INPUT
-                                (structure->port object)))
-                         object))))))
+      ((_ object) #`(cond
+                      ;;TCP INPUT
+                      ((cond
+                         ((port->file object))
+                         ((port->message object))
+                         (else #f))
+                       => structure-out)
+                      ;;CURRENT INPUT
+                      ((cond
+                         ((file? object))
+                         ((message? object))
+                         (else #f))
+                       (structure->port object))
+                      (else object))))))
 
 (module* parallel #f
   (require (only-in racket/place place* place-channel-get place-channel-put)
