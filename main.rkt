@@ -47,7 +47,7 @@
   (struct message (name content hour minute second timezone))
   (define (port->message port)
     (with-handlers ((exn:fail:contract? (lambda (exn) #f)))
-      (apply message (cdr (regexp-try-match #rx"^[[]:message:(.*?)>:(.*?)<([0-9]*):([0-9]*):([0-9]*),(.*?)>[]]$" port)))))
+      (apply message (cdr (regexp-match-peek #rx#"^[[]:message:(.*?)>:(.*?)<([0-9]*):([0-9]*):([0-9]*),(.*?)>[]]$" port)))))
   (define (message-out message) (format "~a>:~a<~a:~a:~a,~a>"
                                         (message-name message)
                                         (message-content message)
@@ -57,30 +57,26 @@
                                         (message-timezone message)))
   (define (message->port message) (open-input-string (format "[:message:~a]" (message-out message))))
 
-  (struct file message (port)
-    #:guard (lambda (name content hour minute second timezone port type-name)
+  (struct file (name content port)
+    #:guard (lambda (name content port type-name)
               (values name
                       content
-                      hour
-                      minute
-                      second
-                      timezone
                       (if (input-port? port) port (error (format "~a : It is not a port" type-name))))))
   (define (port->file port)
     (with-handlers ((exn:fail:contract? (lambda (exn) #f)))
-      (apply file (append (cdr (regexp-try-match #rx"^[[]:file:(.*?)>:(.*?)[]]$" port))
-                          (list #f #f #f #f port)))))
+      (apply file (append (cdr (regexp-match-peek #rx#"^[[]:file:(.*?)>:(.*?)[]]$" port))
+                          (list port)))))
   (define (file-out file)
     (display "Download?[y/n]:")
     (cond [(string-ci=? (read-line) "y")
            (with-handlers ((exn:fail:filesystem? (lambda (exn) (void))))
              (make-directory "file"))
-           (display-to-file (message-content file) (build-path 'same "file" (bytes->string/utf-8 (message-name file))) #:exists 'truncate/replace)
+           (display-to-file (file-content file) (build-path 'same "file" (bytes->string/utf-8 (file-name file))) #:exists 'truncate/replace)
            "Successful"]
           [else "Cancelled"]))
   (define (file->port file) (input-port-append
                              #t
-                             (open-input-string (format "[:file:~a>:" (message-name file)))
+                             (open-input-string (format "[:file:~a>:" (file-name file)))
                              (file-port file)
                              (open-input-string "]")))
 
@@ -111,6 +107,7 @@
            (only-in file/gunzip gunzip-through-ports)
            (only-in racket/string string-prefix?)
            (only-in racket/path string->some-system-path)
+           (only-in racket/file make-temporary-file)
            (only-in racket/date current-date)
            (only-in racket/port copy-port)
            (submod ".." extension))
@@ -122,9 +119,9 @@
   (define (handleIO in-in out name)
     (let loop ()
       (define syn (sync in-in (read-line-evt)))
-      (cond ((input-port? syn) (define output (open-output-bytes))
-                               (gunzip-through-ports syn output)
-                               (displayln (handleInput (open-input-bytes (get-output-bytes output))))
+      (cond ((input-port? syn) (define port (open-output-bytes))
+                               (gunzip-through-ports syn port)
+                               (displayln (handleInput (open-input-bytes (get-output-bytes port))))
                                (flush-output (current-output-port)))
             ((string? syn) (gzip-through-ports
                             (handleInput
@@ -134,7 +131,7 @@
                                 (with-handlers ((exn:fail:filesystem? (lambda (exn) (apply message name "error" (getTime)))))
                                   (file (path->string (let-values (((base name bool) (split-path path)))
                                                         name))
-                                        #f #f #f #f #f (open-input-file path))))
+                                        #f (open-input-file path))))
                                (else (apply message name syn (getTime)))))
                             out #f 0)
                            (flush-output out)))
