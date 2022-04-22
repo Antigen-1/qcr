@@ -61,11 +61,13 @@
     #:guard (lambda (name content port type-name)
               (values name
                       content
-                      (if (input-port? port) port (error (format "~a : It is not a port" type-name))))))
+                      (cond [(input-port? port) port]
+                            [(path? content) (open-input-file content)]
+                            [(or (string? content) (bytes? content)) #f]
+                            [else (error (format "~a error : port field" type-name))]))))
   (define (port->file port)
     (with-handlers ((exn:fail:contract? (lambda (exn) #f)))
-      (apply file (append (cdr (regexp-match-peek #rx#"^[[]:file:(.*?)>:(.*?)[]]$" port))
-                          (list port)))))
+      (apply file `(,@(cdr (regexp-match-peek #rx#"^[[]:file:(.*?)>:(.*?)[]]$" port)) #f))))
   (define (file-out file)
     (display "Download?[y/n]:")
     (cond [(string-ci=? (read-line) "y")
@@ -131,7 +133,7 @@
                                 (with-handlers ((exn:fail:filesystem? (lambda (exn) (apply message name "error" (getTime)))))
                                   (file (path->string (let-values (((base name bool) (split-path path)))
                                                         name))
-                                        #f (open-input-file path))))
+                                        path #f)))
                                (else (apply message name syn (getTime)))))
                             out #f 0)
                            (flush-output out)))
