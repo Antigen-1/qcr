@@ -1,6 +1,8 @@
 #lang racket/base
 (require (file "private/cross.rkt"))
 
+(define current-browser (make-parameter #f))
+
 ;; Notice
 ;; To install (from within the package directory):
 ;;   $ raco pkg install
@@ -86,6 +88,31 @@
     (with-handlers ((exn:fail:contract? (lambda (exn) #f)))
       (apply file `(,@(cdr (regexp-match-peek #rx#"^[[]:file:(.*?)>:(.*?)[]]$" port)) #f))))
 
+  (struct link message ()
+    #:methods gen:structure
+    [(define (structure-out link)
+       (displayln (format "link:~a<~a:~a:~a,~a>"
+                          (message-name link)
+                          (message-hour link)
+                          (message-minute link)
+                          (message-second link)
+                          (message-timezone link)))
+       (display "Redirect[y/n]:")
+       (cond ((string-ci=? "y" (read-line)) ((current-browser) (message-content link)) "ok")
+             (else (format "~a:cancelled" (message-content link)))))
+     (define (structure->port link)
+       (open-input-string
+        (format "[:link:~a>:~a<~a:~a:~a,~a>]"
+                (message-name link)
+                (message-content link)
+                (message-hour link)
+                (message-minute link)
+                (message-second link)
+                (message-timezone link))))])
+  (define (port->link port)
+    (with-handlers ((exn:fail:contract? (lambda (exn) #f)))
+      (apply link (cdr (regexp-match-peek #rx#"^[[]:link:(.*?)>:(.*?)<([0-9]*):([0-9]*):([0-9]*),(.*?)>[]]$" port)))))
+
   ;;TODO
 
   (define-syntax (handleInput stx)
@@ -94,12 +121,14 @@
                       ;;TCP INPUT
                       ((cond
                          ((port->file object))
+                         ((port->link object))
                          ((port->message object))
                          (else #f))
                        => structure-out)
                       ;;CURRENT INPUT
                       ((cond
                          ((file? object))
+                         ((link? object))
                          ((message? object))
                          (else #f))
                        (structure->port object))
@@ -188,9 +217,11 @@
     (define mode (getMode))
     (define port (getPort))
     (define hostname (getHostname mode))
-    (parameterize ([current-custodian (make-custodian)])
+    (define browser (let () (local-require browser) (lambda (url) (open-url url))))
+    (parameterize ([current-browser browser]
+                   [current-custodian (make-custodian)])
       (break-enabled #t)
-      (with-handlers ([exn:fail? (lambda (exn) (custodian-shutdown-all (current-custodian)))]
+      (with-handlers ([exn:fail:network? (lambda (exn) (custodian-shutdown-all (current-custodian)))]
                       [exn:break? (lambda (exn) (custodian-shutdown-all (current-custodian)))])
         (define-values (in out)
           (cond [(string-ci=? mode "Accept") (createListener port hostname)]
