@@ -1,8 +1,6 @@
 #lang racket/base
 (require (file "private/cross.rkt"))
 
-(define current-browser (make-parameter #f))
-
 ;; Notice
 ;; To install (from within the package directory):
 ;;   $ raco pkg install
@@ -43,7 +41,8 @@
   (require (for-syntax racket/base)
            (only-in racket/file display-to-file)
            (only-in racket/port input-port-append)
-           (only-in racket/generic define-generics))
+           (only-in racket/generic define-generics)
+           (only-in browser/external send-url))
   (provide (struct-out message) (struct-out file) (struct-out link) handleInput)
 
   (define-generics structure
@@ -91,14 +90,17 @@
   (struct link message ()
     #:methods gen:structure
     [(define (structure-out link)
+       (define url (message-content link))
        (displayln (format "link:~a<~a:~a:~a,~a>"
-                          (message-name link)
+                          url
                           (message-hour link)
                           (message-minute link)
                           (message-second link)
                           (message-timezone link)))
        (display "Redirect[y/n]:")
-       (cond ((string-ci=? "y" (read-line)) ((current-browser) (message-content link)) "ok")
+       (cond ((string-ci=? "y" (read-line))
+              (send-url (bytes->string/utf-8 url) #t)
+              "ok")
              (else (format "~a:cancelled" (message-content link)))))
      (define (structure->port link)
        (open-input-string
@@ -135,8 +137,7 @@
                       (else object))))))
 
 (module* parallel #f
-  (require (only-in racket/place place* place-channel-get place-channel-put)
-           (only-in file/gzip gzip-through-ports)
+  (require (only-in file/gzip gzip-through-ports)
            (only-in file/gunzip gunzip-through-ports)
            (only-in racket/string string-prefix?)
            (only-in racket/path string->some-system-path)
@@ -172,19 +173,16 @@
                            (flush-output out)))
       (loop)))
   (define (runParallel in out name)
-    (let-values (((pl i in-in e) (place* #:in #f #:out #f #:err #f ch
-                                         (define in (place-channel-get ch))
-                                         (copy-port in (current-output-port)))))
-      (place-channel-put pl in)
-      (displayln "You can Chat now.")
-      (handleIO in-in out name))))
+    (define-values (in-in in-out) (make-pipe))
+    (thread (lambda () (copy-port in in-out)))
+    (displayln "You can Chat now.")
+    (handleIO in-in out name)))
 
 (module* main #f
 
   (require (submod ".." listener)
            (submod ".." connector)
-           (submod ".." parallel)
-           (only-in browser open-url))
+           (submod ".." parallel))
   (provide getMode getName getHostname getPort)
 
 
@@ -220,10 +218,9 @@
     (define mode (getMode))
     (define port (getPort))
     (define hostname (getHostname mode))
-    (parameterize ([current-browser open-url]
-                   [current-custodian (make-custodian)])
+    (parameterize ([current-custodian (make-custodian)])
       (break-enabled #t)
-      (with-handlers ([exn:fail:network? (lambda (exn) (custodian-shutdown-all (current-custodian)))]
+      (with-handlers ([exn:fail? (lambda (exn) (custodian-shutdown-all (current-custodian)))]
                       [exn:break? (lambda (exn) (custodian-shutdown-all (current-custodian)))])
         (define-values (in out)
           (cond [(string-ci=? mode "Accept") (createListener port hostname)]
