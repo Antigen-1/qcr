@@ -44,7 +44,7 @@
            (only-in racket/file display-to-file)
            (only-in racket/port input-port-append)
            (only-in racket/generic define-generics))
-  (provide (struct-out message) (struct-out file) handleInput)
+  (provide (struct-out message) (struct-out file) (struct-out link) handleInput)
 
   (define-generics structure
     (structure->port structure)
@@ -165,6 +165,8 @@
                                   (file (path->string (let-values (((base name bool) (split-path path)))
                                                         name))
                                         path #f)))
+                               ((string-prefix? syn "link>")
+                                (apply link name (substring syn 5) (getTime)))
                                (else (apply message name syn (getTime)))))
                             out #f 0)
                            (flush-output out)))
