@@ -181,7 +181,8 @@
 
   (require (submod ".." listener)
            (submod ".." connector)
-           (submod ".." parallel))
+           (submod ".." parallel)
+           (only-in browser open-url))
   (provide getMode getName getHostname getPort)
 
 
@@ -217,8 +218,7 @@
     (define mode (getMode))
     (define port (getPort))
     (define hostname (getHostname mode))
-    (define browser (let () (local-require browser) (lambda (url) (open-url url))))
-    (parameterize ([current-browser browser]
+    (parameterize ([current-browser open-url]
                    [current-custodian (make-custodian)])
       (break-enabled #t)
       (with-handlers ([exn:fail:network? (lambda (exn) (custodian-shutdown-all (current-custodian)))]
