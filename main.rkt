@@ -23,6 +23,10 @@
 
 ;; Code here
 
+(define cname (make-parameter #f))
+(define cmode (make-parameter "accept"))
+(define cport (make-parameter #f))
+(define chost (make-parameter "localhost"))
 
 
 (module* listener racket/base
@@ -182,48 +186,29 @@
 
   (require (submod ".." listener)
            (submod ".." connector)
-           (submod ".." parallel))
-  (provide getMode getName getHostname getPort)
+           (submod ".." parallel)
+           (only-in racket/cmdline command-line))
 
-
-  (define (getName) (let ()
-                      (display "name:")
-                      (read-line)))
-  (define (getMode) (let ()
-                      (display "mode [Accept/Connect]:")
-                      (read-line)))
-  (define (getPort)
-    (let ()
-      (display "port-no:")
-      (let work ([no (read-line)])
-        (cond ((string->number no))
-              (else (display "again")
-                    (work (read)))))))
-  (define (getHostname mode)
-    (cond [(string-ci=? mode "Accept")
-           (begin
-             (display "hostname[optional,default to none]:")
-             (define host (read-line))
-             (cond [(equal? host "") #f]
-                   [else host]))]
-          [else (begin
-                  (display "hostname:")
-                  (let work ()
-                    (define host (read-line))
-                    (cond [(equal? host "") (work)]
-                          [else host])))]))
+  (define (parseCmdln)
+    (command-line
+     #:program "qcr"
+     #:once-each (("+n" "++name") n "Your name" (cname n))
+     #:once-each (("+m" "++mode") m "Current mode[accept/connect,default to accept]" (cmode m))
+     #:once-each (("+p" "++port") p "Port number" (cport p))
+     #:once-each (("+h" "++host") h "Hostname[default to localhost]" (chost h))))
 
   (begin
-    (define name (getName))
-    (define mode (getMode))
-    (define port (getPort))
-    (define hostname (getHostname mode))
+    (parseCmdln)
+    (define name (cname))
+    (define mode (cmode))
+    (define port (cport))
+    (define host (chost))
     (parameterize ([current-custodian (make-custodian)])
       (break-enabled #t)
       (with-handlers ([exn:fail? (lambda (exn) (custodian-shutdown-all (current-custodian)))]
                       [exn:break? (lambda (exn) (custodian-shutdown-all (current-custodian)))])
         (define-values (in out)
-          (cond [(string-ci=? mode "Accept") (createListener port hostname)]
-                [else (createConnector hostname port)]))
+          (cond [(string-ci=? mode "Accept") (createListener port host)]
+                [else (createConnector host port)]))
         (displayln "Connect Successfully.")
         (runParallel in out name)))))
