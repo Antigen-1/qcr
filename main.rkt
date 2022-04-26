@@ -26,7 +26,7 @@
 (define cname (make-parameter #f))
 (define cmode (make-parameter "accept"))
 (define cport (make-parameter #f))
-(define chost (make-parameter "localhost"))
+(define chost (make-parameter #f))
 
 
 (module* listener racket/base
@@ -192,10 +192,10 @@
   (define (parseCmdln)
     (command-line
      #:program "qcr"
-     #:once-each (("+n" "++name") n "Your name" (cname n))
-     #:once-each (("+m" "++mode") m "Current mode[accept/connect,default to accept]" (cmode m))
-     #:once-each (("+p" "++port") p "Port number" (cport p))
-     #:once-each (("+h" "++host") h "Hostname[default to localhost]" (chost h))))
+     #:once-any (("+n" "++name") n "Your name" (cname n))
+     #:once-any (("+m" "++mode") m "Current mode[accept/connect,default to accept]" (cmode m))
+     #:once-any (("+p" "++port") p "Port number" (cport (string->number p)))
+     #:once-any (("+h" "++host") h "Hostname[default to none]" (chost h))))
 
   (begin
     (parseCmdln)
