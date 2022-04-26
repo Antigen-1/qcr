@@ -23,10 +23,6 @@
 
 ;; Code here
 
-(define cname (make-parameter #f))
-(define cmode (make-parameter "accept"))
-(define cport (make-parameter #f))
-(define chost (make-parameter #f))
 
 
 (module* listener racket/base
@@ -188,6 +184,11 @@
            (submod ".." connector)
            (submod ".." parallel)
            (only-in racket/cmdline command-line))
+
+  (define cname (make-parameter #f))
+  (define cmode (make-parameter "accept"))
+  (define cport (make-parameter #f))
+  (define chost (make-parameter #f))
 
   (define (parseCmdln)
     (command-line
