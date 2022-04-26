@@ -64,7 +64,7 @@
                              (define (structure->port message) (open-input-string (format "[:message:~a]" (structure-out message))))])
   (define (port->message port)
     (with-handlers ((exn:fail:contract? (lambda (exn) #f)))
-      (apply message (cdr (regexp-match-peek #rx#"^[[]:message:(.*?)>:(.*?)<([0-9]*):([0-9]*):([0-9]*),(.*?)>[]]$" port)))))
+      (apply message (cdr (regexp-try-match #rx#"^[[]:message:(.*?)>:(.*?)<([0-9]*):([0-9]*):([0-9]*),(.*?)>[]]$" port)))))
 
   (struct file (name content port)
     #:guard (lambda (name content port type-name)
@@ -89,7 +89,7 @@
                                                              (open-input-string "]")))])
   (define (port->file port)
     (with-handlers ((exn:fail:contract? (lambda (exn) #f)))
-      (apply file `(,@(cdr (regexp-match-peek #rx#"^[[]:file:(.*?)>:(.*?)[]]$" port)) #f))))
+      (apply file `(,@(cdr (regexp-try-match #rx#"^[[]:file:(.*?)>:(.*?)[]]$" port)) #f))))
 
   (struct link message ()
     #:methods gen:structure
@@ -117,7 +117,7 @@
                 (message-timezone link))))])
   (define (port->link port)
     (with-handlers ((exn:fail:contract? (lambda (exn) #f)))
-      (apply link (cdr (regexp-match-peek #rx#"^[[]:link:(.*?)>:(.*?)<([0-9]*):([0-9]*):([0-9]*),(.*?)>[]]$" port)))))
+      (apply link (cdr (regexp-try-match #rx#"^[[]:link:(.*?)>:(.*?)<([0-9]*):([0-9]*):([0-9]*),(.*?)>[]]$" port)))))
 
   ;;TODO
 
