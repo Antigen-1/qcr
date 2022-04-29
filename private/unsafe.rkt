@@ -19,8 +19,7 @@
                             -> (when (= r -1)
                                  (error "zip_close : fail"))))
 (define dir->zip
-  (lambda (dir zip)
-    (define path (path->complete-path dir))
+  (lambda (path zip)
     (define-values (r v) (zip_open zip ZIP_CREATE))
     (for ((fn (in-directory path)))
       (cond

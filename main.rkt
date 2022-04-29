@@ -1,5 +1,6 @@
 #lang racket/base
-(require (file "private/cross.rkt"))
+(require (file "private/cross.rkt")
+         (file "private/unsafe.rkt"))
 
 ;; Notice
 ;; To install (from within the package directory):
@@ -43,7 +44,7 @@
            (only-in racket/port input-port-append)
            (only-in racket/generic define-generics)
            (only-in browser/external send-url))
-  (provide (struct-out message) (struct-out file) (struct-out link) handleInput)
+  (provide (struct-out message) (struct-out file) (struct-out link) (struct-out directory) handleInput)
 
   (define-generics structure
     (structure->port structure)
@@ -71,6 +72,7 @@
                             [(or (string? content) (bytes? content)) #f]
                             [else (error (format "~a error : port field" type-name))])))
     #:methods gen:structure [(define (structure-out file)
+                               (displayln (file-name file))
                                (display "Download?[y/n]:")
                                (cond [(string-ci=? (read-line) "y")
                                       (with-handlers ((exn:fail:filesystem? (lambda (exn) (void))))
@@ -115,6 +117,27 @@
     (with-handlers ((exn:fail:contract? (lambda (exn) #f)))
       (apply link (cdr (regexp-try-match #rx#"^[[]:link:(.*?)>:(.*?)<([0-9]*):([0-9]*):([0-9]*),(.*?)>[]]$" port)))))
 
+  (struct directory file ()
+    #:methods gen:structure
+    [(define (structure-out dir)
+       (displayln (file-name dir))
+       (display "Download?[y/n]:")
+       (cond [(string-ci=? (read-line) "y")
+              (with-handlers ((exn:fail:filesystem? (lambda (exn) (void))))
+                (make-directory "file"))
+              (display-to-file (file-content dir) (build-path 'same "file" (bytes->string/utf-8 (file-name dir))) #:exists 'truncate/replace)
+              "Successful"]
+             [else "Cancelled"]))
+     (define (structure->port dir)
+       (input-port-append
+        #t
+        (open-input-string (format "[:dir:~a>:" (file-name dir)))
+        (file-port dir)
+        (open-input-string "]")))])
+  (define (port->directory port)
+    (with-handlers ((exn:fail:contract? (lambda (exn) #f)))
+      (apply directory `(,@(cdr (regexp-try-match #rx#"^[[]:dir:(.*?)>:(.*?)[]]$" port)) #f))))
+
   ;;TODO
 
   (define-syntax (handleInput stx)
@@ -122,6 +145,7 @@
       ((_ object) #`(cond
                       ;;TCP INPUT
                       ((cond
+                         ((port->directory object))
                          ((port->file object))
                          ((port->link object))
                          ((port->message object))
@@ -129,6 +153,7 @@
                        => structure-out)
                       ;;CURRENT INPUT
                       ((cond
+                         ((directory? object))
                          ((file? object))
                          ((link? object))
                          ((message? object))
@@ -160,6 +185,16 @@
             ((string? syn) (gzip-through-ports
                             (handleInput
                              (cond
+                               ((string-prefix? syn "dir>")
+                                (define zip (make-temporary-file "rkt~a.zip"))
+                                (define path (string->some-system-path (substring syn 4) (system-type 'os)))
+                                (with-handlers ((exn:fail:filesystem? (lambda (exn) (apply message name "error" (getTime)))))
+                                  (dir->zip (path->complete-path path) zip)
+                                  (directory
+                                   (path->string (let-values (((base name bool) (split-path path)))
+                                                   name))
+                                   zip
+                                   #f)))
                                ((string-prefix? syn "file>")
                                 (define path (string->some-system-path (substring syn 5) (system-type 'os)))
                                 (with-handlers ((exn:fail:filesystem? (lambda (exn) (apply message name "error" (getTime)))))
