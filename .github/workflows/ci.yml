@@ -21,6 +21,8 @@ jobs:
           distribution: full
           variant: ${{ matrix.racket-variant }}
           version: ${{ matrix.racket-version }}
+      - name: Installing libzip
+        run: apt install libzip
       - name: Installing qcr and its dependencies
         run: raco pkg install --no-docs --auto --name qcr
       - name: Compiling qcr and building its docs
