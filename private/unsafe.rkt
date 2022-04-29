@@ -1,0 +1,33 @@
+#lang racket/base
+(require ffi/unsafe ffi/unsafe/define racket/file)
+
+(define libzip (ffi-lib "libzip"))
+(define-ffi-definer define-zip libzip)
+(define ZIP_CREATE 1)
+(define zip_t_p (_cpointer 'zip_t))
+(define-zip zip_open (_fun _path _int (r : (_ptr o _int)) -> (v : zip_t_p) -> (values r v)))
+(define ZIP_FL_ENC_GUESS 0)
+(define zip_int64_t _int64)
+(define zip_flags_t _uint32)
+(define zip_source_t_p (_cpointer 'zip_source_t))
+(define-zip zip_source_file (_fun zip_t_p _path _uint64 _int64 -> zip_source_t_p))
+(define-zip zip_file_add (_fun zip_t_p _string zip_source_t_p zip_flags_t -> (r : zip_int64_t)
+                               -> (when (= r -1)
+                                    (error "zip_file_add : fail"))))
+(define-zip zip_close (_fun zip_t_p -> (r : _int)
+                            -> (when (= r -1)
+                                 (error "zip_close : fail"))))
+(define dir->zip
+  (lambda (dir)
+    (define path (path->complete-path dir))
+    (define zip (make-temporary-file "rkt~a.zip"))
+    (define-values (r v) (zip_open zip ZIP_CREATE))
+    (for ((fn (in-directory path)))
+      (zip_file_add
+       v
+       (let-values (((base name bool) (split-path fn)))
+         (path->string name))
+       (zip_source_file v fn 0 -1)
+       ZIP_FL_ENC_GUESS))
+    (zip_close v)
+    zip))
