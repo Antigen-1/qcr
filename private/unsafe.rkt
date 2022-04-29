@@ -1,5 +1,5 @@
 #lang racket/base
-(require ffi/unsafe ffi/unsafe/define racket/file)
+(require ffi/unsafe ffi/unsafe/define)
 (provide dir->zip)
 
 (define libzip (ffi-lib "libzip"))
@@ -19,9 +19,8 @@
                             -> (when (= r -1)
                                  (error "zip_close : fail"))))
 (define dir->zip
-  (lambda (dir)
+  (lambda (dir zip)
     (define path (path->complete-path dir))
-    (define zip (make-temporary-file "rkt~a.zip"))
     (define-values (r v) (zip_open zip ZIP_CREATE))
     (for ((fn (in-directory path)))
       (cond
@@ -33,5 +32,4 @@
           (zip_source_file v fn 0 -1)
           ZIP_FL_ENC_GUESS))
         (else (void))))
-    (zip_close v)
-    zip))
+    (zip_close v)))
