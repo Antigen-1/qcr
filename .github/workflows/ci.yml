@@ -21,8 +21,11 @@ jobs:
           distribution: full
           variant: ${{ matrix.racket-variant }}
           version: ${{ matrix.racket-version }}
-      - name: Installing libzip
-        run: apt install libzip-dev
+      - name: Cache APT Packages
+        uses: awalsh128/cache-apt-pkgs-action@v1.0.1
+        with:
+          packages: libzip-dev
+          version: 1.0
       - name: Installing qcr and its dependencies
         run: raco pkg install --no-docs --auto --name qcr
       - name: Compiling qcr and building its docs
