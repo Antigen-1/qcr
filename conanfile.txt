@@ -2,6 +2,7 @@
 libzip/1.8.0
 
 [generators]
+CMakeDeps
 cmake
 
 [imports]
