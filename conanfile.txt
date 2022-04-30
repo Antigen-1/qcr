@@ -2,9 +2,8 @@
 libzip/1.8.0
 
 [generators]
-CMakeDeps
 cmake
 
 [imports]
-bin, *.dll -> ./libzip
-lib, lib* -> ./libzip
+bin, *.dll -> libzip
+lib, lib* -> libzip
