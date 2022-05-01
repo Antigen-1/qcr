@@ -76,7 +76,7 @@
                             [(or (string? content) (bytes? content)) #f]
                             [else (error (format "~a error : port field" type-name))])))
     #:methods gen:structure [(define (structure-out file)
-                               (displayln (file-name file))
+                               (displayln (format "file:~a" (file-name file)))
                                (display "Download?[y/n]:")
                                (cond [(string-ci=? (read-line) "y")
                                       (with-handlers ((exn:fail:filesystem? (lambda (exn) (void))))
@@ -124,7 +124,7 @@
   (struct directory file ()
     #:methods gen:structure
     [(define (structure-out dir)
-       (displayln (file-name dir))
+       (displayln (format "dir:~a" (file-name dir)))
        (display "Download?[y/n]:")
        (cond [(string-ci=? (read-line) "y")
               (with-handlers ((exn:fail:filesystem? (lambda (exn) (void))))
