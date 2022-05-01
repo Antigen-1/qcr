@@ -1,6 +1,11 @@
 #lang racket/base
 (require (file "private/cross.rkt")
-         (file "private/unsafe.rkt"))
+         (file "private/unsafe.rkt")
+         racket/runtime-path
+         (for-syntax racket/base))
+
+(define-runtime-path libzip (string->path "libzip"))
+(current-ffi-lib-dir (list libzip))
 
 ;; Notice
 ;; To install (from within the package directory):

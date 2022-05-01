@@ -1,8 +1,10 @@
 #lang racket/base
 (require ffi/unsafe ffi/unsafe/define)
-(provide dir->zip)
+(provide dir->zip current-ffi-lib-dir)
 
-(define libzip (ffi-lib "libzip"))
+(define current-ffi-lib-dir (make-parameter #f))
+
+(define libzip (ffi-lib "libzip" (list "1.8.0" #f) #:get-lib-dirs (current-ffi-lib-dir)))
 (define-ffi-definer define-zip libzip)
 (define ZIP_CREATE 1)
 (define zip_t_p (_cpointer 'zip_t))

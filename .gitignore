@@ -17,3 +17,12 @@ qcr-x86_64-linux
 qcr-x86_64-linux.zip
 qcr-x86_64-win32.zip
 file
+conan_imports_manifest.txt
+conan.lock
+conanbuildinfo.cmake
+conanbuildinfo.mak
+conanbuildinfo.txt
+conaninfo.txt
+graph_info.json
+libzip
+qcr/lib/plt/racketcs-8.4
