@@ -10,4 +10,4 @@ qcr: main
 	raco distribute qcr main
 
 clean: 
-	rm -rf libzip qcr main 
+	rm -rf libzip qcr* main 
