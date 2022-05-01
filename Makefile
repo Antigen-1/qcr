@@ -1,7 +1,7 @@
 all: libzip main qcr
 
 libzip: conanfile.txt
-	conan install conanfile.txt --remote=conan-center
+	conan install conanfile.txt --build=missing
 
 main: main.rkt libzip
 	raco exe -o main main.rkt
