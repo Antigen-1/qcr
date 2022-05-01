@@ -2,7 +2,7 @@
 (require ffi/unsafe ffi/unsafe/define)
 (provide dir->zip)
 
-(define libzip (ffi-lib "libzip" (list "1.8.0" #f) #:get-lib-dirs (lambda () (list (string->path "libzip")))))
+(define libzip (ffi-lib (if (equal? (system-type 'os) 'windows) "zip" "libzip") #:get-lib-dirs (lambda () (list (string->path "libzip")))))
 (define-ffi-definer define-zip libzip)
 (define ZIP_CREATE 1)
 (define zip_t_p (_cpointer 'zip_t))
