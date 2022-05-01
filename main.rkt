@@ -5,7 +5,6 @@
          (for-syntax racket/base))
 
 (define-runtime-path libzip (string->path "libzip"))
-(current-ffi-lib-dir (list libzip))
 
 ;; Notice
 ;; To install (from within the package directory):

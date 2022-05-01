@@ -9,5 +9,5 @@ main: main.rkt libzip
 qcr: main
 	raco distribute qcr main
 
-clear: 
-	rm -rf libzip qcr 
+clean: 
+	rm -rf libzip qcr main 
