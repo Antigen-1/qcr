@@ -191,7 +191,7 @@
                              (cond
                                ((string-prefix? syn "dir>")
                                 (define zip (make-temporary-file "rkt~a.zip"))
-                                (define path (string->some-system-path (substring syn 4) (system-type 'os)))
+                                (define path (resolve-path (substring syn 4)))
                                 (with-handlers ((exn:fail:filesystem? (lambda (exn) (apply message name "error" (getTime)))))
                                   (dir->zip (path->complete-path path) zip)
                                   (directory
