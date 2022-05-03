@@ -1,9 +1,9 @@
 [requires]
 libzip/1.8.0
 
-[generators]
-cmake
+[options]
+libzip:shared=True
 
 [imports]
 bin, *.dll -> libzip
-lib, lib* -> libzip
+lib, *.so* -> libzip
