@@ -1,13 +1,17 @@
-all: libzip main qcr
+libzip_win32: conanfile.txt
+	conan install conanfile.txt --build=missing --settings os="windows" --settings compiler="Visual Studio"
 
-libzip: conanfile.txt
-	conan install conanfile.txt --build=missing
+libzip_linux: conanfile.txt
+	conan install conanfile.txt --build=missing --settings os="linux" --settings compiler="gcc"
 
-main: main.rkt libzip
-	raco exe -o main main.rkt
+main: main.rkt
+	raco exe main.rkt
 
-qcr: main
-	raco distribute qcr main
+win32: main libzip_win32
+	raco distribute qcr-x86_64-win32 main.exe
+
+linux: main libzip_linux
+	raco distribute qcr-x86_64-linux main
 
 clean: 
-	rm -rf libzip qcr* main 
+	rm -rf libzip qcr* main*

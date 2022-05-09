@@ -3,6 +3,11 @@ libzip/1.8.0
 
 [options]
 libzip:shared=True
+bzip2:shared=True
+openssl:shared=True
+xz_utils:shared=True
+zlib:shared=True
+zstd:shared=True
 
 [imports]
 bin, *.dll -> libzip
