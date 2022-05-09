@@ -22,13 +22,12 @@
   (lambda (path zip)
     (define v (zip_open zip ZIP_CREATE 0))
     (for ((fn (in-directory path)))
-      (cond
-        ((file-exists? fn)
-         (zip_file_add
-          v
-          (let-values (((base name bool) (split-path fn)))
-            (path->string name))
-          (zip_source_file v fn 0 -1)
-          ZIP_FL_ENC_GUESS))
-        (else (void))))
+      ;;This traverses nested subdirectories.
+      (let ((fn (resolve-path fn)))
+        (zip_file_add
+         v
+         (let-values (((base name bool) (split-path fn)))
+           (path->string name))
+         (zip_source_file v fn 0 -1)
+         ZIP_FL_ENC_GUESS)))
     (zip_close v)))

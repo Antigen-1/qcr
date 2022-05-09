@@ -169,7 +169,6 @@
   (require (only-in file/gzip gzip-through-ports)
            (only-in file/gunzip gunzip-through-ports)
            (only-in racket/string string-prefix?)
-           (only-in racket/path string->some-system-path)
            (only-in racket/file make-temporary-file)
            (only-in racket/date current-date)
            (only-in racket/port copy-port)
@@ -203,7 +202,7 @@
                                    zip
                                    #f)))
                                ((string-prefix? syn "file>")
-                                (define path (string->some-system-path (substring syn 5) (system-type 'os)))
+                                (define path (resolve-path (substring syn 5)))
                                 (with-handlers ((exn:fail:filesystem? (lambda (exn) (apply message name "error" (getTime)))))
                                   (file (path->string (let-values (((base name bool) (split-path path)))
                                                         name))
