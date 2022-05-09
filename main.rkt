@@ -190,10 +190,13 @@
                             (handleInput
                              (cond
                                ((string-prefix? syn "dir>")
-                                (define zip (make-temporary-file "rkt~a.zip"))
+                                (define zip
+                                  (let loop ()
+                                    (define zip (build-path (find-system-path 'temp-dir) (format "rkt~a.zip" (random))))
+                                    (if (file-exists? zip) (loop) zip)))
                                 (define path (resolve-path (substring syn 4)))
                                 (with-handlers ((exn:fail:filesystem? (lambda (exn) (apply message name "error" (getTime)))))
-                                  (dir->zip (path->complete-path path) zip)
+                                  (dir->zip (path->complete-path path) (path->complete-path zip))
                                   (directory
                                    (path->string (let-values (((base name bool) (split-path path)))
                                                    name))
@@ -245,7 +248,7 @@
     (define host (chost))
     (parameterize ([current-custodian (make-custodian)])
       (break-enabled #t)
-      (with-handlers ([exn:fail? (lambda (exn) (custodian-shutdown-all (current-custodian)))]
+      (with-handlers (;[exn:fail? (lambda (exn) (custodian-shutdown-all (current-custodian)))]
                       [exn:break? (lambda (exn) (custodian-shutdown-all (current-custodian)))])
         (define-values (in out)
           (cond [(string-ci=? mode "Accept") (createListener port host)]

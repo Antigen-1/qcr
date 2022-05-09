@@ -5,8 +5,8 @@
 (define libzip (ffi-lib (if (equal? (system-type 'os) 'windows) "zip" "libzip") #:get-lib-dirs (lambda () (list (string->path "libzip")))))
 (define-ffi-definer define-zip libzip)
 (define ZIP_CREATE 1)
-(define zip_t_p (_cpointer 'zip_t))
-(define-zip zip_open (_fun _path _int (r : (_ptr o _int)) -> (v : zip_t_p) -> (values r v)))
+(define zip_t_p (_cpointer/null 'zip_t))
+(define-zip zip_open (_fun _path _int (r : (_ptr o _int)) -> (v : zip_t_p) -> (if (zero? r) v (error (format "errorp : ~a" r)))))
 (define ZIP_FL_ENC_GUESS 0)
 (define zip_int64_t _int64)
 (define zip_flags_t _uint32)
@@ -20,7 +20,7 @@
                                  (error "zip_close : fail"))))
 (define dir->zip
   (lambda (path zip)
-    (define-values (r v) (zip_open zip ZIP_CREATE))
+    (define v (zip_open zip ZIP_CREATE))
     (for ((fn (in-directory path)))
       (cond
         ((file-exists? fn)
