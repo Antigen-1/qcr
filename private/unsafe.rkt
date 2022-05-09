@@ -23,7 +23,7 @@
     (define v (zip_open zip ZIP_CREATE 0))
     (for ((fn (in-directory path)))
       ;;This traverses nested subdirectories.
-      (let ((fn (resolve-path (build-path path fn))))
+      (let ((fn (resolve-path fn)))
         (if (directory-exists? fn) (void)
             (zip_file_add
              v
