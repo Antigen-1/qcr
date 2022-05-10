@@ -27,3 +27,4 @@ graph_info.json
 libzip
 qcr/lib/plt/racketcs-8.4
 CMakeFiles/CMakeTmp
+.vscode

@@ -1,10 +1,5 @@
 #lang racket/base
-(require (file "private/cross.rkt")
-         (file "private/unsafe.rkt")
-         racket/runtime-path
-         (for-syntax racket/base))
-
-(define-runtime-path libzip (string->path "libzip"))
+(require (file "private/cross.rkt"))
 
 ;; Notice
 ;; To install (from within the package directory):
@@ -172,6 +167,7 @@
            (only-in racket/file make-temporary-file)
            (only-in racket/date current-date)
            (only-in racket/port copy-port)
+           (only-in file/zip zip->output)
            (submod ".." extension))
   (provide runParallel)
 
@@ -189,13 +185,17 @@
                             (handleInput
                              (cond
                                ((string-prefix? syn "dir>")
-                                (define zip
-                                  (let loop ()
-                                    (define zip (build-path (find-system-path 'temp-dir) (format "rkt~a.zip" (random))))
-                                    (if (file-exists? zip) (loop) zip)))
+                                (define zip (make-temporary-file "rkt~a.zip"))
                                 (define path (resolve-path (substring syn 4)))
                                 (with-handlers ((exn:fail:filesystem? (lambda (exn) (apply message name "error" (getTime)))))
-                                  (dir->zip (path->complete-path path) (path->complete-path zip))
+                                  (parameterize ((current-output-port (open-output-file zip #:exists 'truncate/replace))
+                                                 (current-directory path))
+                                    (apply zip->output
+                                           (for/list
+                                               ((fn (in-directory))
+                                                #:when (not (directory-exists?) fn))
+                                             (resolve-path fn)))
+                                    (close-output-port (current-output-port)))
                                   (directory
                                    (path->string (let-values (((base name bool) (split-path path)))
                                                    name))

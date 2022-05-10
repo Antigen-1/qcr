@@ -1,9 +1,0 @@
-[requires]
-libzip/1.8.0
-
-[options]
-libzip:shared=True
-
-[imports]
-bin, *.dll -> libzip
-lib, *.so* -> libzip
