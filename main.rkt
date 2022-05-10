@@ -193,7 +193,7 @@
                                     (apply zip->output
                                            (for/list
                                                ((fn (in-directory))
-                                                #:when (not (directory-exists?) fn))
+                                                #:when (not (directory-exists? fn)))
                                              (resolve-path fn)))
                                     (close-output-port (current-output-port)))
                                   (directory
