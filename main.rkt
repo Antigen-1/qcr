@@ -190,11 +190,11 @@
                                 (with-handlers ((exn:fail:filesystem? (lambda (exn) (apply message name "error" (getTime)))))
                                   (parameterize ((current-output-port (open-output-file zip #:exists 'truncate/replace))
                                                  (current-directory path))
-                                    (apply zip->output
-                                           (for/list
-                                               ((fn (in-directory))
-                                                #:when (not (directory-exists? fn)))
-                                             (resolve-path fn)))
+                                    (zip->output
+                                     (for/list
+                                         ((fn (in-directory))
+                                          #:when (not (directory-exists? fn)))
+                                       (resolve-path fn)))
                                     (close-output-port (current-output-port)))
                                   (directory
                                    (path->string (let-values (((base name bool) (split-path path)))
