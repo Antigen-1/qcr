@@ -1,10 +1,10 @@
 .PHONY : clean
 
 libzip_win32 : conanfile.txt
-	conan install conanfile.txt --build=missing --settings os="windows" --settings compiler="Visual Studio"
+	conan install conanfile.txt --build=missing --settings os="Windows" --settings compiler="Visual Studio"
 
 libzip_linux : conanfile.txt
-	conan install conanfile.txt --build=missing --settings os="linux" --settings compiler="gcc"
+	conan install conanfile.txt --build=missing --settings os="Linux" --settings compiler="gcc"
 
 main : main.rkt
 	raco exe main.rkt
