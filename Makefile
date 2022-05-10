@@ -1,7 +1,7 @@
 .PHONY : clean
 
 libzip_win32 : conanfile.txt
-	conan install conanfile.txt --build=missing --settings os="Windows" --settings compiler="Visual Studio"
+	conan install conanfile.txt --build=missing --settings os="Windows" --settings compiler="Visual Studio" --settings compiler.version=22
 
 libzip_linux : conanfile.txt
 	conan install conanfile.txt --build=missing --settings os="Linux" --settings compiler="gcc"
