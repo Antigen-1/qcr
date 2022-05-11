@@ -41,8 +41,7 @@
   (require (for-syntax racket/base)
            (only-in racket/file display-to-file)
            (only-in racket/port input-port-append)
-           (only-in racket/generic define-generics)
-           (only-in browser/external send-url))
+           (only-in racket/generic define-generics))
   (provide (struct-out message) (struct-out file) (struct-out link) (struct-out directory) handleInput)
 
   (define-generics structure
@@ -100,7 +99,7 @@
                           (message-timezone link)))
        (display "Redirect[y/n]:")
        (cond ((string-ci=? "y" (read-line))
-              (send-url (bytes->string/utf-8 url) #t)
+              ((dynamic-require 'browser/external 'send-url) (bytes->string/utf-8 url) #t)
               "ok")
              (else (format "~a:cancelled" (message-content link)))))
      (define (structure->port link)
