@@ -186,7 +186,7 @@
                ((num 2)
                 (temp temp))
                (if (> (* base num) root) temp (work (add1 num) (list-update temp (- (* num base) 2) add1))))))))
-    (map (indexes-of result 0 =) (lambda (n) (+ 2 n)))))
+    (map (lambda (n) (+ 2 n)) (indexes-of result 0 =))))
 
 (module* parallel #f
   (require (only-in file/gzip gzip-through-ports)
