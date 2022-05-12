@@ -162,7 +162,7 @@
 (module* crypto #f
   (require (only-in racket/generator sequence->repeated-generator)
            (only-in racket/math exact-floor)
-           (only-in racket/list make-list list-update indexes-of))
+           (only-in racket/list make-list list-update indexes-of range))
   (provide vigenere-encrypt vigenere-decrypt makePrime)
 
   (define (vigenere-encrypt input-port output-port byte-string)
@@ -175,18 +175,29 @@
       (write-byte (remainder (+ (- byte (generator)) 256) 256) output-port)))
   (define (makePrime maximum)
     (define root (exact-floor (sqrt maximum)))
-    (define result
+    (define temp
       (let loop
-        ((base 2)
-         (temp (make-list (sub1 root) 0)))
-        (if (> (* base 2) root) temp
-            (loop
-             (add1 base)
-             (let work
-               ((num 2)
-                (temp temp))
-               (if (> (* base num) root) temp (work (add1 num) (list-update temp (- (* num base) 2) add1))))))))
-    (map (lambda (n) (+ 2 n)) (indexes-of result 0 =))))
+        ((index 3)
+         (temp (make-list root 0)))
+        (cond
+          ((< root (add1 index)) (list-update temp 0 add1))
+          (else (loop (+ index 2) (list-update temp index add1))))))
+    (define former
+      (let loop
+        ((base 3)
+         (temp temp))
+        (cond ((> (* base 3) root) temp)
+              (else
+               (loop
+                (+ base 2)
+                (let work
+                  ((num 3)
+                   (temp temp))
+                  (cond ((> (* base num) root) temp)
+                        (else (work (+ num 2) (list-update temp (- (* base num) 1) add1))))))))))
+    (define half (map add1 (indexes-of former 0 =)))
+    (define (check n) (andmap (lambda (p) (not (zero? (remainder n p)))) half))
+    (append half (filter check (range (add1 root) (add1 maximum))))))
 
 (module* parallel #f
   (require (only-in file/gzip gzip-through-ports)
