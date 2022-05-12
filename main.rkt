@@ -160,8 +160,10 @@
                       (else object))))))
 
 (module* crypto #f
-  (require (only-in racket/generator sequence->repeated-generator))
-  (provide vigenere-encrypt vigenere-decrypt)
+  (require (only-in racket/generator sequence->repeated-generator)
+           (only-in racket/math exact-floor)
+           (only-in racket/list make-list list-update indexes-of))
+  (provide vigenere-encrypt vigenere-decrypt makePrime)
 
   (define (vigenere-encrypt input-port output-port byte-string)
     (define generator (sequence->repeated-generator byte-string))
@@ -170,7 +172,21 @@
   (define (vigenere-decrypt input-port output-port byte-string)
     (define generator (sequence->repeated-generator byte-string))
     (for ((byte (in-input-port-bytes input-port)) #:break (eof-object? byte))
-      (write-byte (remainder (+ (- byte (generator)) 256) 256) output-port))))
+      (write-byte (remainder (+ (- byte (generator)) 256) 256) output-port)))
+  (define (makePrime maximum)
+    (define root (sub1 (exact-floor (sqrt maximum))))
+    (define result
+      (let loop
+        ((base 2)
+         (temp (make-list root 0)))
+        (if (> (* base 2) root) temp
+            (loop
+             (add1 base)
+             (let work
+               ((num 2)
+                (temp temp))
+               (if (> (* base num) root) temp (work (add1 num) (list-update temp (- (* num base) 2) add1))))))))
+    (map (indexes-of result 0 =) (lambda (n) (+ 2 n)))))
 
 (module* parallel #f
   (require (only-in file/gzip gzip-through-ports)
