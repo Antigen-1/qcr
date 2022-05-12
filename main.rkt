@@ -159,6 +159,19 @@
                        (structure->port object))
                       (else object))))))
 
+(module* crypto #f
+  (require (only-in racket/generator sequence->repeated-generator))
+  (provide vigenere-encrypt vigenere-decrypt)
+
+  (define (vigenere-encrypt input-port output-port byte-string)
+    (define generator (sequence->repeated-generator byte-string))
+    (for ((byte (in-input-port-bytes input-port)) #:break (eof-object? byte))
+      (write-byte (remainder (+ byte (generator)) 256) output-port)))
+  (define (vigenere-decrypt input-port output-port byte-string)
+    (define generator (sequence->repeated-generator byte-string))
+    (for ((byte (in-input-port-bytes input-port)) #:break (eof-object? byte))
+      (write-byte (remainder (+ (- byte (generator)) 256) 256) output-port))))
+
 (module* parallel #f
   (require (only-in file/gzip gzip-through-ports)
            (only-in file/gunzip gunzip-through-ports)
