@@ -174,11 +174,11 @@
     (for ((byte (in-input-port-bytes input-port)) #:break (eof-object? byte))
       (write-byte (remainder (+ (- byte (generator)) 256) 256) output-port)))
   (define (makePrime maximum)
-    (define root (sub1 (exact-floor (sqrt maximum))))
+    (define root (exact-floor (sqrt maximum)))
     (define result
       (let loop
         ((base 2)
-         (temp (make-list root 0)))
+         (temp (make-list (sub1 root) 0)))
         (if (> (* base 2) root) temp
             (loop
              (add1 base)
