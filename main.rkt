@@ -213,9 +213,10 @@
     (let loop ((a a) (b b))
       (cond ((zero? b) (cons 1 0))
             (else (define pair (loop b (remainder a b))) (cons (cdr pair) (- (car pair) (* (cdr pair) (exact-floor (/ a b)))))))))
+  (define (random-prime l) (cond ((isPrime (crypto-random l))) (else (random-prime l))))
   (define (genPublic)
-    (let ((p (crypto-random 5))
-          (q (crypto-random 5)))
+    (let ((p (random-prime 5))
+          (q (random-prime 5)))
       (define e
         (let loop
           ((temp (* (sub1 p) (sub1 q)))
