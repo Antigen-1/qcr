@@ -197,7 +197,11 @@
                         (else (work (+ num 2) (list-update temp (- (* base num) 1) add1))))))))))
     (define half (map add1 (indexes-of former 0 =)))
     (define (check n) (andmap (lambda (p) (not (zero? (remainder n p)))) half))
-    (append half (filter check (range (add1 root) (add1 maximum))))))
+    (append half (filter check (range (add1 root) (add1 maximum)))))
+  (define (isPrime num)
+    (let* ((root (exact-floor (sqrt num)))
+           (check (lambda (n) (andmap (lambda (p) (not (zero? (remainder n p)))) (makePrime root)))))
+      (cond ((check num) num) (else #f)))))
 
 (module* parallel #f
   (require (only-in file/gzip gzip-through-ports)
