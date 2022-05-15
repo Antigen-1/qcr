@@ -221,7 +221,7 @@
           ((temp (* (sub1 p) (sub1 q)))
            (e (crypto-random 5)))
           (if (= (gcd temp e) 1) e (loop temp (crypto-random 5)))))
-      (define e* (car (exgcd e (* (sub1 p) (sub1 q)))))
+      (define e* (cdr (exgcd (* (sub1 p) (sub1 q)) e)))
       (values p q e e*))))
 
 (module* parallel #f
