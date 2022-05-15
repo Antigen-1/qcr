@@ -162,8 +162,9 @@
 (module* crypto #f
   (require (only-in racket/generator sequence->repeated-generator)
            (only-in racket/math exact-floor)
-           (only-in racket/list make-list list-update indexes-of range))
-  (provide vigenere-encrypt vigenere-decrypt makePrime)
+           (only-in racket/list make-list list-update indexes-of range empty?)
+           (only-in racket/random crypto-random-bytes))
+  (provide vigenere-encrypt vigenere-decrypt makePrime isPrime crypto-random)
 
   (define (vigenere-encrypt input-port output-port byte-string)
     (define generator (sequence->repeated-generator byte-string))
@@ -201,7 +202,13 @@
   (define (isPrime num)
     (let* ((root (exact-floor (sqrt num)))
            (check (lambda (n) (andmap (lambda (p) (not (zero? (remainder n p)))) (makePrime root)))))
-      (cond ((check num) num) (else #f)))))
+      (cond ((check num) num) (else #f))))
+  (define (crypto-random l)
+    (let loop
+      ((index 0)
+       (li (reverse (bytes->list (crypto-random-bytes l))))
+       (result 0))
+      (cond ((empty? li) result) (else (loop (add1 index) (cdr li) (+ result (* (expt 2 (* 8 index)) (car li)))))))))
 
 (module* parallel #f
   (require (only-in file/gzip gzip-through-ports)
