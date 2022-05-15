@@ -164,7 +164,7 @@
            (only-in racket/math exact-floor)
            (only-in racket/list make-list list-update indexes-of range empty?)
            (only-in racket/random crypto-random-bytes))
-  (provide vigenere-encrypt vigenere-decrypt makePrime isPrime crypto-random)
+  (provide vigenere-encrypt vigenere-decrypt makePrime isPrime crypto-random genPublic)
 
   (define (vigenere-encrypt input-port output-port byte-string)
     (define generator (sequence->repeated-generator byte-string))
@@ -208,7 +208,21 @@
       ((index 0)
        (li (reverse (bytes->list (crypto-random-bytes l))))
        (result 0))
-      (cond ((empty? li) result) (else (loop (add1 index) (cdr li) (+ result (* (expt 2 (* 8 index)) (car li)))))))))
+      (cond ((empty? li) result) (else (loop (add1 index) (cdr li) (+ result (* (expt 2 (* 8 index)) (car li))))))))
+  (define (exgcd a b)
+    (let loop ((a a) (b b))
+      (cond ((zero? b) (cons 1 0))
+            (else (define pair (loop b (remainder a b))) (cons (cdr pair) (- (car pair) (* (cdr pair) (exact-floor (/ a b)))))))))
+  (define (genPublic)
+    (let ((p (crypto-random 5))
+          (q (crypto-random 5)))
+      (define e
+        (let loop
+          ((temp (* (sub1 p) (sub1 q)))
+           (e (crypto-random 5)))
+          (if (= (gcd temp e) 1) e (loop temp (crypto-random 5)))))
+      (define e* (car (exgcd e (* (sub1 p) (sub1 q)))))
+      (values p q e e*))))
 
 (module* parallel #f
   (require (only-in file/gzip gzip-through-ports)
