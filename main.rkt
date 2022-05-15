@@ -214,16 +214,16 @@
       (cond ((zero? b) (cons 1 0))
             (else (define pair (loop b (remainder a b))) (cons (cdr pair) (- (car pair) (* (cdr pair) (exact-floor (/ a b)))))))))
   (define (random-prime l) (cond ((isPrime (crypto-random l))) (else (random-prime l))))
-  (define (genKeys)
+  (define (genKeys l)
     (let ((p (random-prime 5))
           (q (random-prime 5)))
       (define e
         (let loop
           ((temp (* (sub1 p) (sub1 q)))
-           (e (crypto-random 5)))
-          (if (= (gcd temp e) 1) e (loop temp (crypto-random 5)))))
-      (define e* (cdr (exgcd (* (sub1 p) (sub1 q)) e)))
-      (values e e*))))
+           (e (crypto-random l)))
+          (if (= (gcd temp e) 1) e (loop temp (crypto-random l)))))
+      (define e* (car (exgcd e (* (sub1 p) (sub1 q)))))
+      (values (* p q) e e*))))
 
 (module* parallel #f
   (require (only-in file/gzip gzip-through-ports)
