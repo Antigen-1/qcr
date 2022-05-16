@@ -183,11 +183,11 @@
           -> (if r r (error "RSA_generae_key : fail."))))
   (define-libcrypto RSA_size (_fun RSA_p -> _int))
   (define-libcrypto RSA_public_encrypt
-    (_fun _int _bytes (_bytes o (RSA_size p)) (p : RSA_p) (_int : 3)
+    (_fun _int _bytes (_bytes o (RSA_size p)) (p : RSA_p) (_int = 3)
           -> (r : _int)
           -> (if (= -1 r) (error "RSA_public_encrypt : fail.") (void))))
   (define-libcrypto RSA_private_decrypt
-    (_fun _int _bytes (_bytes o (RSA_size p)) (p : RSA_p) (_int : 3)
+    (_fun _int _bytes (_bytes o (RSA_size p)) (p : RSA_p) (_int = 3)
           -> (r : _int)
           -> (if (= -1 r) (error "RSA_private_decrypt : fail.") (void))))
   (define-libcrypto RSA_print_fp
