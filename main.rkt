@@ -191,9 +191,12 @@
     (_fun _int _bytes (_bytes o (RSA_size p)) (p : RSA_p) (_int = 3)
           -> (r : _int)
           -> (if (= -1 r) (error "RSA_private_decrypt : fail.") (void))))
+  (define-libcrypto RSAPrivateKey_dup (_fun RSA_p -> RSA_p))
+  (define-libcrypto RSAPublicKey_dup (_fun RSA_p -> RSA_p))
+  (define-libcrypto RSA_free (_fun RSA_p -> _void))
   (define-libcrypto RSA_print_fp
     (_fun FILE_p RSA_p _int -> (r : _int) -> (if (zero? r) (error "RSA_print_fp : fail.") (void))))
-  (define windows-dll-dir (lambda () `(,@(string-split (getenv "PATH") #rx";") ,(find-system-path 'sys-dir))))
+  (define windows-dll-dir (lambda () `(,(find-system-path 'sys-dir) ,@(string-split (getenv "PATH") #rx";"))))
   (define linux-so-dir (lambda () (string-split (getenv "LD_LIBRARY_PATH") #rx":")))
   (define find-glibc (lambda () (filter (lambda (p) (regexp-match #rx"^libc.*?so.*?$" (path->string p))) (apply append (map directory-list (linux-so-dir))))))
   (define find-msvcrt (lambda () (filter (lambda (p) (regexp-match #rx"^msvcrt.*?dll$" (path->string p))) (apply append (map directory-list (windows-dll-dir))))))
