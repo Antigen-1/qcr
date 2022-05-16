@@ -160,7 +160,10 @@
                       (else object))))))
 
 (module* crypto #f
-  (require (only-in racket/generator sequence->repeated-generator))
+  (require (only-in racket/generator sequence->repeated-generator)
+           (only-in openssl/libcrypto libcrypto)
+           ffi/unsafe
+           (only-in ffi/unsafe/define define-ffi-definer))
   (provide vigenere-encrypt vigenere-decrypt)
 
   (define (vigenere-encrypt input-port output-port byte-string)
@@ -171,6 +174,26 @@
     (define generator (sequence->repeated-generator byte-string))
     (for ((byte (in-input-port-bytes input-port)) #:break (eof-object? byte))
       (write-byte (remainder (+ (- byte (generator)) 256) 256) output-port)))
+  (define-ffi-definer define-libcrypto libcrypto)
+  (define RSA_p (_cpointer/null 'RSA))
+  (define FILE_p (_cpointer/null 'FILE))
+  (define-libcrypto RSA_generate_key
+    (_fun _int _ulong (_pointer = #f) (_pointer = #f)
+          -> (r : RSA_p)
+          -> (if r r (error "RSA_generae_key : fail."))))
+  (define-libcrypto RSA_size (_fun RSA_p -> _int))
+  (define-libcrypto RSA_public_encrypt
+    (_fun _int _bytes (_bytes o (RSA_size p)) (p : RSA_p) (_int : 3)
+          -> (r : _int)
+          -> (if (= -1 r) (error "RSA_public_encrypt : fail.") (void))))
+  (define-libcrypto RSA_private_decrypt
+    (_fun _int _bytes (_bytes o (RSA_size p)) (p : RSA_p) (_int : 3)
+          -> (r : _int)
+          -> (if (= -1 r) (error "RSA_private_decrypt : fail.") (void))))
+  (define-libcrypto RSA_print_fp
+    (_fun FILE_p RSA_p _int -> (r : _int) -> (if (zero? r) (error "RSA_print_fp : fail.") (void))))
+  (define-ffi-definer define-stdio  (ffi-lib "libstdio" #:fail (ffi-lib "stdio")))
+  (define-stdio fopen (_fun _file _string -> FILE_p))
   )
 
 (module* parallel #f
