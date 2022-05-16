@@ -194,7 +194,7 @@
   (define-libcrypto RSA_print_fp
     (_fun FILE_p RSA_p _int -> (r : _int) -> (if (zero? r) (error "RSA_print_fp : fail.") (void))))
   (define-ffi-definer define-stdio
-    (ffi-lib "libc" #:fail (ffi-lib "msvcrt" #:get-lib-dirs (lambda () `(,@(string-split (getenv "PATH") #rx";") (find-system-path 'sys-dir))))
+    (ffi-lib "libc" #:fail (ffi-lib "msvcrt" #:get-lib-dirs (lambda () `(,@(string-split (getenv "PATH") #rx";") ,(find-system-path 'sys-dir))))
              #:get-lib-dirs (lambda () (string-split (getenv "LD_LIBRARY_PATH") #rx":"))))
   (define-stdio fopen (_fun _file _string -> FILE_p))
   )
