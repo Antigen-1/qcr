@@ -163,6 +163,7 @@
   (require (only-in racket/generator sequence->repeated-generator)
            (only-in openssl/libcrypto libcrypto)
            ffi/unsafe
+           (only-in racket/string string-split)
            (only-in ffi/unsafe/define define-ffi-definer))
   (provide vigenere-encrypt vigenere-decrypt)
 
@@ -192,7 +193,9 @@
           -> (if (= -1 r) (error "RSA_private_decrypt : fail.") (void))))
   (define-libcrypto RSA_print_fp
     (_fun FILE_p RSA_p _int -> (r : _int) -> (if (zero? r) (error "RSA_print_fp : fail.") (void))))
-  (define-ffi-definer define-stdio  (ffi-lib "libstdio" #:fail (ffi-lib "stdio")))
+  (define-ffi-definer define-stdio
+    (ffi-lib "libc" #:fail (ffi-lib "msvcrt" #:get-lib-dirs (lambda () `(,@(string-split (getenv "PATH") #rx";") (find-system-path 'sys-dir))))
+             #:get-lib-dirs (lambda () (string-split (getenv "LD_LIBRARY_PATH") #rx":"))))
   (define-stdio fopen (_fun _file _string -> FILE_p))
   )
 
