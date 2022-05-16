@@ -193,10 +193,14 @@
           -> (if (= -1 r) (error "RSA_private_decrypt : fail.") (void))))
   (define-libcrypto RSA_print_fp
     (_fun FILE_p RSA_p _int -> (r : _int) -> (if (zero? r) (error "RSA_print_fp : fail.") (void))))
-  (define-ffi-definer define-stdio
-    (ffi-lib "libc" #:fail (lambda () (ffi-lib "msvcrt" #:get-lib-dirs (lambda () `(,@(string-split (getenv "PATH") #rx";") ,(find-system-path 'sys-dir)))))
-             #:get-lib-dirs (lambda () (string-split (getenv "LD_LIBRARY_PATH") #rx":"))))
-  (define-stdio fopen (_fun _file _string -> FILE_p))
+  (define windows-dll-dir (lambda () `(,@(string-split (getenv "PATH") #rx";") ,(find-system-path 'sys-dir))))
+  (define linux-so-dir (lambda () (string-split (getenv "LD_LIBRARY_PATH") #rx":")))
+  (define find-glibc (lambda () (filter (lambda (p) (regexp-try-match #rx"^libc.*?so.*?$" (path->string p))) (apply append (map directory-list (linux-so-dir))))))
+  (define find-msvcrt (lambda () (filter (lambda (p) (regexp-try-match #rx"^msvcrt.*?dll$" (path->string p))) (apply append (map directory-list (windows-dll-dir))))))
+  (define-ffi-definer define-std
+    (ffi-lib (car (find-glibc)) #:fail (lambda () (ffi-lib (car (find-msvcrt)) #:get-lib-dirs windows-dll-dir))
+             #:get-lib-dirs linux-so-dir))
+  (define-std fopen (_fun _file _string -> FILE_p))
   )
 
 (module* parallel #f
