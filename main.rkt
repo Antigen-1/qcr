@@ -160,11 +160,8 @@
                       (else object))))))
 
 (module* crypto #f
-  (require (only-in racket/generator sequence->repeated-generator)
-           (only-in racket/math exact-floor)
-           (only-in racket/list make-list list-update indexes-of range empty?)
-           (only-in racket/random crypto-random-bytes))
-  (provide vigenere-encrypt vigenere-decrypt makePrime isPrime crypto-random genKeys)
+  (require (only-in racket/generator sequence->repeated-generator))
+  (provide vigenere-encrypt vigenere-decrypt)
 
   (define (vigenere-encrypt input-port output-port byte-string)
     (define generator (sequence->repeated-generator byte-string))
@@ -174,57 +171,7 @@
     (define generator (sequence->repeated-generator byte-string))
     (for ((byte (in-input-port-bytes input-port)) #:break (eof-object? byte))
       (write-byte (remainder (+ (- byte (generator)) 256) 256) output-port)))
-  (define (makePrime maximum)
-    (define root (exact-floor (sqrt maximum)))
-    (define temp
-      (let loop
-        ((index 3)
-         (temp (make-list root 0)))
-        (cond
-          ((< root (add1 index)) (list-update temp 0 add1))
-          (else (loop (+ index 2) (list-update temp index add1))))))
-    (define former
-      (let loop
-        ((base 3)
-         (temp temp))
-        (cond ((> (* base 3) root) temp)
-              (else
-               (loop
-                (+ base 2)
-                (let work
-                  ((num 3)
-                   (temp temp))
-                  (cond ((> (* base num) root) temp)
-                        (else (work (+ num 2) (list-update temp (- (* base num) 1) add1))))))))))
-    (define half (map add1 (indexes-of former 0 =)))
-    (define (check n) (andmap (lambda (p) (not (zero? (remainder n p)))) half))
-    (append half (filter check (range (add1 root) (add1 maximum)))))
-  (define (isPrime num)
-    (let* ((root (exact-floor (sqrt num)))
-           (check (lambda (n) (andmap (lambda (p) (not (zero? (remainder n p)))) (makePrime root)))))
-      (cond ((check num) num) (else #f))))
-  (define (crypto-random l)
-    (let loop
-      ((index 0)
-       (li (reverse (bytes->list (crypto-random-bytes l))))
-       (result 0))
-      (cond ((empty? li) result) (else (loop (add1 index) (cdr li) (+ result (* (expt 2 (* 8 index)) (car li))))))))
-  (define (exgcd a b)
-    (if (< a b) (exgcd b a)
-        (let loop ((a a) (b b))
-          (cond ((zero? b) (cons 1 0))
-                (else (define pair (loop b (remainder a b))) (cons (cdr pair) (- (car pair) (* (cdr pair) (exact-floor (/ a b))))))))))
-  (define (random-prime l) (cond ((isPrime (crypto-random l))) (else (random-prime l))))
-  (define (genKeys l)
-    (let ((p (random-prime 5))
-          (q (random-prime 5)))
-      (define e
-        (let loop
-          ((temp (* (sub1 p) (sub1 q)))
-           (e (crypto-random l)))
-          (if (= (gcd temp e) 1) e (loop temp (crypto-random l)))))
-      (define e* (car (exgcd e (* (sub1 p) (sub1 q)))))
-      (values (* p q) e e*))))
+  )
 
 (module* parallel #f
   (require (only-in file/gzip gzip-through-ports)
