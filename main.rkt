@@ -191,8 +191,8 @@
     (_fun _int _bytes (_bytes o (RSA_size p)) (p : RSA_p) (_int = 3)
           -> (r : _int)
           -> (if (= -1 r) (error "RSA_private_decrypt : fail.") (void))))
-  (define-libcrypto RSAPrivateKey_dup (_fun RSA_p -> RSA_p))
-  (define-libcrypto RSAPublicKey_dup (_fun RSA_p -> RSA_p))
+  (define-libcrypto RSAPrivateKey_dup (_fun RSA_p -> (r : RSA_p) -> (if r r (error "RSAPrivateKey_dup : fail."))))
+  (define-libcrypto RSAPublicKey_dup (_fun RSA_p -> (r : RSA_p) -> (if r r (error "RSAPublicKey_dup : fail."))))
   (define-libcrypto RSA_free (_fun RSA_p -> _void))
   (define-libcrypto RSA_print_fp
     (_fun FILE_p RSA_p _int -> (r : _int) -> (if (zero? r) (error "RSA_print_fp : fail.") (void))))
