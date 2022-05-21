@@ -24,7 +24,7 @@
 ;; Code here
 
 (define exe (make-will-executor))
-(thread (lambda () (let loop () (will-execute exe) (loop))))
+(void (thread (lambda () (let loop () (will-execute exe) (loop)))))
 
 (module* listener racket/base
   (require (only-in racket/tcp tcp-listen tcp-accept/enable-break))
