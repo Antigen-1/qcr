@@ -61,9 +61,11 @@
                                                                 (format "message\n~a\n"
                                                                         (list (message-name message) (message-content message) (message-hour message)
                                                                               (message-minute message) (message-second message) (message-timezone message)))))])
-  (define (port->message port) (if (string=? "message" (peek-string 7 0 port))
-                                   (begin (read port) (let ((list (read port))) (apply message list)))
-                                   #f))
+  (define (port->message port)
+    (with-handlers ((exn:fail:filesystem? (lambda (exn) #f)))
+      (if (string=? "message" (peek-string 7 0 port))
+          (begin (read port) (let ((list (read port))) (apply message list)))
+          #f)))
 
   (struct file (name content port)
     #:guard (lambda (name content port type-name)
