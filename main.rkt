@@ -209,9 +209,7 @@
   )
 
 (module* parallel #f
-  (require (only-in file/gzip gzip-through-ports)
-           (only-in file/gunzip gunzip-through-ports)
-           (only-in racket/string string-prefix?)
+  (require (only-in racket/string string-prefix?)
            (only-in racket/file make-temporary-file file->bytes display-to-file)
            (only-in racket/date current-date)
            (only-in racket/port copy-port)
@@ -228,10 +226,10 @@
     (let loop ()
       (define syn (sync in-in (read-line-evt)))
       (cond ((input-port? syn) (define port (open-output-bytes))
-                               (gunzip-through-ports syn port)
+                               (copy-port syn port)
                                (displayln (handleInput (open-input-bytes (get-output-bytes port))))
                                (flush-output (current-output-port)))
-            ((string? syn) (gzip-through-ports
+            ((string? syn) (copy-port
                             (handleInput
                              (cond
                                ((string-prefix? syn "dir>")
