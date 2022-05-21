@@ -165,7 +165,7 @@
            ffi/unsafe
            (only-in racket/string string-split)
            (only-in ffi/unsafe/define define-ffi-definer))
-  (provide vigenere-encrypt vigenere-decrypt)
+  (provide (all-defined-out))
 
   (define (vigenere-encrypt input-port output-port byte-string)
     (define generator (sequence->repeated-generator byte-string))
