@@ -192,6 +192,8 @@
                                                      -> (if (zero? r) (error "PEM_write_bio_RSAPublicKey : fail.") (void))))
   (define-libcrypto PEM_read_bio_RSAPublicKey (_fun BIO_p (_pointer = #f) (_pointer = #f) (_pointer = #f) -> (r : RSA_p)
                                                     -> (if r r (error "PEM_read_bio_RSAPublicKey : fail."))))
+  (define-libcrypto PEM_read_bio_RSAPrivateKey (_fun BIO_p (_pointer = #f) (_pointer = #f) (_pointer = #f) -> (r : RSA_p)
+                                                     -> (if r r (error "PEM_read_bio_RSAPrivateKey : fail."))))
   (define-libcrypto BIO_free (_fun BIO_p -> (r : _int) -> (if (zero? r) (error "BIO_free : fail.") (void))))
   (define-libcrypto RSA_size (_fun RSA_p -> _int))
   (define-libcrypto RSA_public_encrypt
