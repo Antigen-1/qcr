@@ -23,7 +23,8 @@
 
 ;; Code here
 
-
+(define exe (make-will-executor))
+(thread (lambda () (let loop () (will-execute exe) (loop))))
 
 (module* listener racket/base
   (require (only-in racket/tcp tcp-listen tcp-accept/enable-break))
@@ -271,6 +272,7 @@
   (require (submod ".." listener)
            (submod ".." connector)
            (submod ".." parallel)
+           (submod ".." crypto)
            (only-in racket/cmdline command-line))
 
   (define cname (make-parameter #f))
@@ -284,7 +286,23 @@
      #:once-any (("+n" "++name") n "Your name" (cname n))
      #:once-any (("+m" "++mode") m "Current mode[accept/connect,default to accept]" (cmode m))
      #:once-any (("+p" "++port") p "Port number" (cport (string->number p)))
-     #:once-any (("+h" "++host") h "Hostname[default to none]" (chost h))))
+     #:once-any (("+h" "++host") h "Hostname[default to none]" (chost h))
+     #:once-any (("+k" "++keys") k "Update rsa keys"
+                                 (with-handlers ((exn:fail:filesystem? (lambda (exn) (void))))
+                                   (if (directory-exists? "keys") (delete-directory "keys") (void))
+                                   (make-directory "keys"))
+                                 (define rsa (RSA_new))
+                                 (define e (BN_new))
+                                 (define private (BIO_new_file (build-path "keys" "key.pem") "w"))
+                                 (define public (BIO_new_file (build-path "keys" "key.pub.pem") "w"))
+                                 (will-register exe rsa RSA_free)
+                                 (will-register exe e BN_free)
+                                 (will-register exe private BIO_free)
+                                 (will-register exe public BIO_free)
+                                 (BN_set_word e 65537)
+                                 (RSA_generate_key_ex rsa (string->number k) e)
+                                 (PEM_write_bio_RSAPrivateKey private rsa)
+                                 (PEM_write_bio_RSAPublicKey public rsa))))
 
   (begin
     (parseCmdln)
