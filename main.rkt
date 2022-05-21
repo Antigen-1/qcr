@@ -301,6 +301,7 @@
            (submod ".." connector)
            (submod ".." parallel)
            (submod ".." crypto)
+           (only-in racket/file delete-directory/files)
            (only-in racket/cmdline command-line))
 
   (define cname (make-parameter #f))
@@ -317,7 +318,7 @@
      #:once-any (("+h" "++host") h "Hostname[default to none]" (chost h))
      #:once-any (("+k" "++keys") k "Update rsa keys"
                                  (with-handlers ((exn:fail:filesystem? (lambda (exn) (void))))
-                                   (if (directory-exists? "keys") (delete-directory "keys") (void))
+                                   (if (directory-exists? "keys") (delete-directory/files "keys") (void))
                                    (make-directory "keys"))
                                  (define rsa (RSA_new))
                                  (define e (BN_new))
