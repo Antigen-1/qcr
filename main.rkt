@@ -273,7 +273,7 @@
     (flush-output out)
     (define o-public (PEM_read_bio_RSAPublicKey
                       (BIO_new_file
-                       (let ((temp (make-temporary-file))
+                       (let ((temp (make-temporary-file #:base-dir "keys"))
                              (len (string->number (read-line in-in))))
                          (display-to-file (read-bytes len in-in) temp #:exists 'truncate/replace)
                          temp)
