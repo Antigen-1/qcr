@@ -62,7 +62,7 @@
                                                                         (list (message-name message) (message-content message) (message-hour message)
                                                                               (message-minute message) (message-second message) (message-timezone message)))))])
   (define (port->message port)
-    (with-handlers ((exn:fail:filesystem? (lambda (exn) #f)))
+    (with-handlers ((exn:fail:contract? (lambda (exn) #f)))
       (if (string=? "message" (peek-string 7 0 port))
           (begin (read port) (let ((list (read port))) (apply message list)))
           #f)))
