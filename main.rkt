@@ -57,10 +57,13 @@
                                                                      (message-minute message)
                                                                      (message-second message)
                                                                      (message-timezone message)))
-                             (define (structure->port message) (open-input-string (format "[:message:~a]" (structure-out message))))])
-  (define (port->message port)
-    (with-handlers ((exn:fail:contract? (lambda (exn) #f)))
-      (apply message (cdr (regexp-try-match #rx#"^[[]:message:(.*?)>:(.*?)<([0-9]*):([0-9]*):([0-9]*),(.*?)>[]]$" port)))))
+                             (define (structure->port message) (open-input-string
+                                                                (format "message\n~a\n"
+                                                                        (list (message-name message) (message-content message) (message-hour message)
+                                                                              (message-minute message) (message-second message) (message-timezone message)))))])
+  (define (port->message port) (if (string=? "message" (peek-string 7 0 port))
+                                   (begin (read port) (let ((list (read port))) (apply message list)))
+                                   #f))
 
   (struct file (name content port)
     #:guard (lambda (name content port type-name)
