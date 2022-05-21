@@ -198,13 +198,13 @@
   (define-libcrypto BIO_free (_fun BIO_p -> (r : _int) -> (if (zero? r) (error "BIO_free : fail.") (void))))
   (define-libcrypto RSA_size (_fun RSA_p -> _int))
   (define-libcrypto RSA_public_encrypt
-    (_fun _int _bytes (_bytes o (RSA_size p)) (p : RSA_p) (_int = 3)
+    (_fun _int _bytes (o : (_bytes o (RSA_size p))) (p : RSA_p) _int
           -> (r : _int)
-          -> (if (= -1 r) (error "RSA_public_encrypt : fail.") (void))))
+          -> (if (= -1 r) (error "RSA_public_encrypt : fail.") o)))
   (define-libcrypto RSA_private_decrypt
-    (_fun _int _bytes (_bytes o (RSA_size p)) (p : RSA_p) (_int = 3)
+    (_fun _int _bytes (o : (_bytes o (RSA_size p))) (p : RSA_p) _int
           -> (r : _int)
-          -> (if (= -1 r) (error "RSA_private_decrypt : fail.") (void))))
+          -> (if (= -1 r) (error "RSA_private_decrypt : fail.") o)))
   (define-libcrypto RSA_free (_fun RSA_p -> _void))
   )
 
@@ -212,10 +212,12 @@
   (require (only-in file/gzip gzip-through-ports)
            (only-in file/gunzip gunzip-through-ports)
            (only-in racket/string string-prefix?)
-           (only-in racket/file make-temporary-file)
+           (only-in racket/file make-temporary-file file->bytes display-to-file)
            (only-in racket/date current-date)
            (only-in racket/port copy-port)
            (only-in file/zip zip->output)
+           (only-in racket/random crypto-random-bytes)
+           (submod ".." crypto)
            (submod ".." extension))
   (provide runParallel)
 
@@ -264,8 +266,20 @@
   (define (runParallel in out name)
     (define-values (in-in in-out) (make-pipe))
     (thread (lambda () (copy-port in in-out)))
+    (write (file->bytes (build-path "keys" "key.pub.pem")) out)
+    (define o-public (PEM_read_bio_RSAPublicKey (let ((temp (make-temporary-file))) (display-to-file (read in-in) temp) temp)))
+    (define m-private (PEM_read_bio_RSAPrivateKey (build-path "keys" "key.pem")))
+    (will-execute exe o-public RSA_free)
+    (will-execute exe m-private RSA_free)
+    (define crypto-bytes (crypto-random-bytes 256))
+    (write (RSA_public_encrypt 256 crypto-bytes o-public 1) out)
+    (define o-key (read in-in))
+    (define-values (revised-in-in revised-in-out) (make-pipe))
+    (define-values (out-in out-out) (make-pipe))
+    (thread (lambda () (vigenere-decrypt in-in revised-in-out o-key)))
+    (thread (lambda () (vigenere-encrypt out-in out crypto-bytes)))
     (displayln "You can Chat now.")
-    (handleIO in-in out name)))
+    (handleIO revised-in-in out-out name)))
 
 (module* main #f
 
