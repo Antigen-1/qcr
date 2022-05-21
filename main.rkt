@@ -213,7 +213,7 @@
 
 (module* parallel #f
   (require (only-in racket/string string-prefix?)
-           (only-in racket/file make-temporary-file file->bytes display-to-file)
+           (only-in racket/file make-temporary-file display-to-file)
            (only-in racket/date current-date)
            (only-in racket/port copy-port)
            (only-in file/zip zip->output)
@@ -267,9 +267,9 @@
   (define (runParallel in out name)
     (define-values (in-in in-out) (make-pipe))
     (void (thread (lambda () (copy-port in in-out))))
-    (define m-public (file->bytes (build-path "keys" "key.pub.pem")))
-    (displayln (bytes-length m-public) out)
-    (display m-public out)
+    (define m-public (build-path "keys" "key.pub.pem"))
+    (displayln (file-size m-public) out)
+    (call-with-input-file m-public (lambda (input-port) (copy-port input-port out)))
     (flush-output out)
     (define bio-pub (BIO_new_file
                      (let ((temp (make-temporary-file))
