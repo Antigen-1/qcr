@@ -63,8 +63,8 @@
                                                                               (message-minute message) (message-second message) (message-timezone message)))))])
   (define (port->message port)
     (with-handlers ((exn:fail:contract? (lambda (exn) #f)))
-      (if (string=? "message" (peek-string 7 0 port))
-          (begin (read-line port) (let ((list (read port))) (apply message list)))
+      (if (bytes=? #"message" (peek-string 7 0 port))
+          (begin (read-bytes-line port) (let ((list (read port))) (apply message list)))
           #f)))
 
   (struct file (name content port)
@@ -90,7 +90,7 @@
                                                              (file-port file)))])
   (define (port->file port)
     (with-handlers ((exn:fail:contract? (lambda (exn) #f)))
-      (if (string=? "file" (peek-string 4 0 port)) (begin (read-line port) (file (read-line port) (port->bytes port) #f)) #f)))
+      (if (bytes=? #"file" (peek-string 4 0 port)) (begin (read-bytes-line port) (file (read-bytes-line port) (port->bytes port) #f)) #f)))
 
   (struct link message ()
     #:methods gen:structure
@@ -119,7 +119,7 @@
                  (message-timezone link)))))])
   (define (port->link port)
     (with-handlers ((exn:fail:contract? (lambda (exn) #f)))
-      (if (string=? "link" (peek-string 4 0 port)) (begin (read-line port) (apply link (read port))) #f)))
+      (if (bytes=? #"link" (peek-string 4 0 port)) (begin (read-bytes-line port) (apply link (read port))) #f)))
 
   (struct directory file ()
     #:methods gen:structure
@@ -140,7 +140,7 @@
         ))])
   (define (port->directory port)
     (with-handlers ((exn:fail:contract? (lambda (exn) #f)))
-      (if (string=? "dir" (peek-string 3 0 port)) (begin (read-line port) (directory (read-line port) (port->bytes port) #f)) #f)))
+      (if (bytes=? #"dir" (peek-string 3 0 port)) (begin (read-bytes-line port) (directory (read-bytes-line port) (port->bytes port) #f)) #f)))
 
   ;;TODO
 
