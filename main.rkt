@@ -81,7 +81,7 @@
                                (cond [(string-ci=? (read-line) "y")
                                       (with-handlers ((exn:fail:filesystem? (lambda (exn) (void))))
                                         (make-directory "file"))
-                                      (display-to-file (file-content file) (build-path 'same "file" (bytes->string/utf-8 (file-name file))) #:exists 'truncate/replace)
+                                      (display-to-file (file-content file) (build-path 'same "file" (file-name file)) #:exists 'truncate/replace)
                                       "Successful"]
                                      [else "Cancelled"]))
                              (define (structure->port file) (input-port-append
@@ -104,7 +104,7 @@
                           (message-timezone link)))
        (display "Redirect[y/n]:")
        (cond ((string-ci=? "y" (read-line))
-              ((dynamic-require 'browser/external 'send-url) (bytes->string/utf-8 url) #t)
+              ((dynamic-require 'browser/external 'send-url) url #t)
               "ok")
              (else (format "~a:cancelled" (message-content link)))))
      (define (structure->port link)
@@ -129,7 +129,7 @@
        (cond [(string-ci=? (read-line) "y")
               (with-handlers ((exn:fail:filesystem? (lambda (exn) (void))))
                 (make-directory "file"))
-              (display-to-file (file-content dir) (build-path 'same "file" (bytes->string/utf-8 (file-name dir))) #:exists 'truncate/replace)
+              (display-to-file (file-content dir) (build-path 'same "file" (file-name dir)) #:exists 'truncate/replace)
               "Successful"]
              [else "Cancelled"]))
      (define (structure->port dir)
