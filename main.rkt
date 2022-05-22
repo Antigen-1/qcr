@@ -90,7 +90,10 @@
                                                              (file-port file)))])
   (define (port->file port)
     (with-handlers ((exn:fail:contract? (lambda (exn) #f)))
-      (if (bytes=? #"file" (peek-bytes 4 0 port)) (begin (read-bytes-line port) (file (bytes->string/utf-8 (read-bytes-line port)) (port->bytes port) #f)) #f)))
+      (if (bytes=? #"file" (peek-bytes 4 0 port))
+          (begin (read-bytes-line port)
+                 (let ((name (bytes->string/utf-8 (read-bytes-line port)))) (file name (port->bytes port) #f)))
+          #f)))
 
   (struct link message ()
     #:methods gen:structure
@@ -140,7 +143,10 @@
         ))])
   (define (port->directory port)
     (with-handlers ((exn:fail:contract? (lambda (exn) #f)))
-      (if (bytes=? #"dir" (peek-bytes 3 0 port)) (begin (read-bytes-line port) (directory (bytes->string/utf-8 (read-bytes-line port)) (port->bytes port) #f)) #f)))
+      (if (bytes=? #"dir" (peek-bytes 3 0 port))
+          (begin (read-bytes-line port)
+                 (let ((name (bytes->string/utf-8 (read-bytes-line port)))) (directory name (port->bytes port) #f)))
+          #f)))
 
   ;;TODO
 
