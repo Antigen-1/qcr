@@ -295,7 +295,7 @@
     (will-register exe bio-pub BIO_free)
     (will-register exe o-public RSA_free)
     (will-register exe m-private RSA_free)
-    (define crypto-bytes (crypto-random-bytes (- (RSA_size o-public) 11)))
+    (define crypto-bytes (crypto-random-bytes 128))
     (define m-key (RSA_public_encrypt (- (RSA_size o-public) 11) crypto-bytes o-public 1))
     (displayln (bytes-length m-key) out)
     (display m-key out)
@@ -307,6 +307,8 @@
     (define-values (out-in out-out) (make-pipe))
     (void (thread (lambda () (vigenere-decrypt in revised-in-out o-key))))
     (void (thread (lambda () (vigenere-encrypt out-in out crypto-bytes))))
+    (displayln "ok" out-out)
+    (displayln (read-line revised-in-in))
     (displayln "You can Chat now.")
     (handleIO revised-in-in out-out name)))
 
