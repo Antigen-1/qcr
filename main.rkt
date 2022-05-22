@@ -41,7 +41,7 @@
 (module* extension #f
   (require (for-syntax racket/base)
            (only-in racket/file display-to-file)
-           (only-in racket/port input-port-append)
+           (only-in racket/port input-port-append port->bytes)
            (only-in racket/generic define-generics))
   (provide (struct-out message) (struct-out file) (struct-out link) (struct-out directory) handleInput)
 
@@ -86,12 +86,11 @@
                                      [else "Cancelled"]))
                              (define (structure->port file) (input-port-append
                                                              #t
-                                                             (open-input-string (format "[:file:~a>:" (file-name file)))
-                                                             (file-port file)
-                                                             (open-input-string "]")))])
+                                                             (open-input-string (format "file\n~a\n" (file-name file)))
+                                                             (file-port file)))])
   (define (port->file port)
     (with-handlers ((exn:fail:contract? (lambda (exn) #f)))
-      (apply file `(,@(cdr (regexp-try-match #rx#"^[[]:file:(.*?)>:(.*?)[]]$" port)) #f))))
+      (if (string=? "file" (read-line port)) (file (read-line port) (port->bytes port) #f) #f)))
 
   (struct link message ()
     #:methods gen:structure
@@ -110,16 +109,17 @@
              (else (format "~a:cancelled" (message-content link)))))
      (define (structure->port link)
        (open-input-string
-        (format "[:link:~a>:~a<~a:~a:~a,~a>]"
-                (message-name link)
-                (message-content link)
-                (message-hour link)
-                (message-minute link)
-                (message-second link)
-                (message-timezone link))))])
+        (format "link\n~a"
+                (list
+                 (message-name link)
+                 (message-content link)
+                 (message-hour link)
+                 (message-minute link)
+                 (message-second link)
+                 (message-timezone link)))))])
   (define (port->link port)
     (with-handlers ((exn:fail:contract? (lambda (exn) #f)))
-      (apply link (cdr (regexp-try-match #rx#"^[[]:link:(.*?)>:(.*?)<([0-9]*):([0-9]*):([0-9]*),(.*?)>[]]$" port)))))
+      (if (string=? "link" (read-line port)) (apply link (read port)) #f)))
 
   (struct directory file ()
     #:methods gen:structure
@@ -135,12 +135,12 @@
      (define (structure->port dir)
        (input-port-append
         #t
-        (open-input-string (format "[:dir:~a>:" (file-name dir)))
+        (open-input-string (format "dir\n~a\n" (file-name dir)))
         (file-port dir)
-        (open-input-string "]")))])
+        ))])
   (define (port->directory port)
     (with-handlers ((exn:fail:contract? (lambda (exn) #f)))
-      (apply directory `(,@(cdr (regexp-try-match #rx#"^[[]:dir:(.*?)>:(.*?)[]]$" port)) #f))))
+      (if (string=? "dir" (read-line port)) (directory (read-line port) (port->bytes port) #f) #f)))
 
   ;;TODO
 
