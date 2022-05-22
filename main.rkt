@@ -217,7 +217,7 @@
   (require (only-in racket/string string-prefix?)
            (only-in racket/file make-temporary-file display-to-file)
            (only-in racket/date current-date)
-           (only-in racket/port copy-port)
+           (only-in racket/port copy-port port->bytes)
            (only-in file/zip zip->output)
            (only-in racket/random crypto-random-bytes)
            (submod ".." crypto)
@@ -227,14 +227,23 @@
   (define (getTime)
     (let ((date (current-date)))
       (list (date-hour date) (date-minute date) (date-second date) (date*-time-zone-name date))))
+  (define (copy-into-port in out)
+    (let ((bytes-string (port->bytes in)))
+      (displayln (bytes-length bytes-string) out)
+      (display bytes-string out)
+      (flush-output out)))
+  (define (copy-from-port in out)
+    (let ((len (string->number (read-line in))))
+      (display (read-bytes len in) out)
+      (flush-output out)))
   (define (handleIO in-in out name)
     (let loop ()
       (define syn (sync in-in (read-line-evt)))
       (cond ((input-port? syn) (define port (open-output-bytes))
-                               (copy-port syn port)
+                               (copy-from-port syn port)
                                (displayln (handleInput (open-input-bytes (get-output-bytes port))))
                                (flush-output (current-output-port)))
-            ((string? syn) (copy-port
+            ((string? syn) (copy-into-port
                             (handleInput
                              (cond
                                ((string-prefix? syn "dir>")
@@ -336,7 +345,8 @@
                                  (BN_set_word e 65537)
                                  (RSA_generate_key_ex rsa (string->number k) e)
                                  (PEM_write_bio_RSAPrivateKey private rsa)
-                                 (PEM_write_bio_RSAPublicKey public rsa))))
+                                 (PEM_write_bio_RSAPublicKey public rsa)
+                                 (exit))))
 
   (begin
     (parseCmdln)
