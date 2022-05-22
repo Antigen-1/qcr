@@ -58,7 +58,7 @@
                                                                      (message-second message)
                                                                      (message-timezone message)))
                              (define (structure->port message) (open-input-string
-                                                                (format "message\n~a\n"
+                                                                (format "message\n~v"
                                                                         (list (message-name message) (message-content message) (message-hour message)
                                                                               (message-minute message) (message-second message) (message-timezone message)))))])
   (define (port->message port)
@@ -109,7 +109,7 @@
              (else (format "~a:cancelled" (message-content link)))))
      (define (structure->port link)
        (open-input-string
-        (format "link\n~a"
+        (format "link\n~v"
                 (list
                  (message-name link)
                  (message-content link)
