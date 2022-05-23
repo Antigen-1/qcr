@@ -81,7 +81,10 @@
                                (cond [(string-ci=? (read-line) "y")
                                       (with-handlers ((exn:fail:filesystem? (lambda (exn) (void))))
                                         (make-directory "file"))
-                                      (display-to-file (file-content file) (build-path 'same "file" (file-name file)) #:exists 'truncate/replace)
+                                      (call-with-output-file
+                                          #:exists 'truncate/replace
+                                        (build-path 'same "file" (file-name file))
+                                        (lambda (out) (write-bytes (file-content file) out)))
                                       "Successful"]
                                      [else "Cancelled"]))
                              (define (structure->port file) (input-port-append
@@ -132,7 +135,10 @@
        (cond [(string-ci=? (read-line) "y")
               (with-handlers ((exn:fail:filesystem? (lambda (exn) (void))))
                 (make-directory "file"))
-              (display-to-file (file-content dir) (build-path 'same "file" (file-name dir)) #:exists 'truncate/replace)
+              (call-with-output-file
+                  #:exists 'truncate/replace
+                (build-path 'same "file" (file-name dir))
+                (lambda (out) (write-bytes (file-content dir) out)))
               "Successful"]
              [else "Cancelled"]))
      (define (structure->port dir)
@@ -295,7 +301,7 @@
     (define bio-pub (BIO_new_file
                      (let ((temp (make-temporary-file))
                            (len (string->number (bytes->string/utf-8 (read-bytes-line in-in)))))
-                       (display-to-file (read-bytes len in-in) temp #:exists 'truncate/replace)
+                       (call-with-output-file #:exists 'truncate/replace temp (lambda (out) (write-bytes (read-bytes len in-in) out)))
                        (path->complete-path temp))
                      "rb"))
     (define o-public (PEM_read_bio_RSAPublicKey bio-pub))
