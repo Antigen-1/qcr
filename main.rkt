@@ -212,11 +212,11 @@
   (define-libcrypto BIO_free (_fun BIO_p -> (r : _int) -> (if (zero? r) (error "BIO_free : fail.") (void))))
   (define-libcrypto RSA_size (_fun RSA_p -> _int))
   (define-libcrypto RSA_public_encrypt
-    (_fun _int _bytes (o : (_bytes o (RSA_size p))) (p : RSA_p) _int
+    (_fun (_int = (- (RSA_size p) 11)) _bytes (o : (_bytes o (RSA_size p))) (p : RSA_p) (_int = 1)
           -> (r : _int)
           -> (if (= -1 r) (error "RSA_public_encrypt : fail.") o)))
   (define-libcrypto RSA_private_decrypt
-    (_fun _int _bytes (o : (_bytes o (RSA_size p))) (p : RSA_p) _int
+    (_fun (_int = (RSA_size p)) _bytes (o : (_bytes o (- (RSA_size p) 11))) (p : RSA_p) (_int = 1)
           -> (r : _int)
           -> (if (= -1 r) (error "RSA_private_decrypt : fail.") o)))
   (define-libcrypto RSA_free (_fun RSA_p -> _void))
@@ -312,13 +312,10 @@
     (will-register exe o-public RSA_free)
     (will-register exe m-private RSA_free)
     (define crypto-bytes (crypto-random-bytes 2037))
-    (define m-key (RSA_public_encrypt (- (RSA_size o-public) 11) crypto-bytes o-public 1))
-    (write-bytes (string->bytes/utf-8 (~a (bytes-length m-key))) out)
-    (write-byte 10 out)
+    (define m-key (RSA_public_encrypt crypto-bytes o-public))
     (write-bytes m-key out)
     (flush-output out)
-    (define o-key (let ((len (string->number (bytes->string/utf-8 (read-bytes-line in-in)))))
-                    (RSA_private_decrypt (RSA_size m-private) (read-bytes len in-in) m-private 1)))
+    (define o-key (RSA_private_decrypt (read-bytes 2048 in-in) m-private))
     (e-generator crypto-bytes)
     (d-generator o-key)
     (displayln "You can Chat now.")
