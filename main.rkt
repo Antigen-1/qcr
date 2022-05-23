@@ -312,7 +312,7 @@
     (write-bytes m-key out)
     (flush-output out)
     (define o-key (let ((len (string->number (bytes->string/utf-8 (read-bytes-line in-in)))))
-                    (RSA_private_decrypt (RSA_size m-private) (read-bytes len in-in) m-private 1)))
+                    (RSA_private_decrypt (- (RSA_size m-private) 11) (read-bytes len in-in) m-private 1)))
     (e-generator crypto-bytes)
     (d-generator o-key)
     (displayln "You can Chat now.")
