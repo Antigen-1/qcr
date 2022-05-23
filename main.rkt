@@ -311,7 +311,7 @@
     (will-register exe bio-pub BIO_free)
     (will-register exe o-public RSA_free)
     (will-register exe m-private RSA_free)
-    (define crypto-bytes (crypto-random-bytes 128))
+    (define crypto-bytes (crypto-random-bytes 2037))
     (define m-key (RSA_public_encrypt (- (RSA_size o-public) 11) crypto-bytes o-public 1))
     (write-bytes (string->bytes/utf-8 (~a (bytes-length m-key))) out)
     (write-byte 10 out)
