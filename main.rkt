@@ -233,7 +233,7 @@
            (only-in racket/format ~a)
            (submod ".." crypto)
            (submod ".." extension))
-  (provide runParallel)
+  (provide runParallel handleIO)
 
   (define d-generator (make-parameter #f (lambda (sequence) (sequence->repeated-generator sequence))))
   (define e-generator (make-parameter #f (lambda (sequence) (sequence->repeated-generator sequence))))
@@ -290,7 +290,7 @@
                             out)
                            (flush-output out)))
       (loop)))
-  (define (runParallel in out name)
+  (define (runParallel in out)
     (define-values (in-in in-out) (make-pipe))
     (thread (lambda () (copy-port in in-out)))
     (define m-public (file->bytes (build-path "keys" "key.pub.pem")))
@@ -319,7 +319,7 @@
     (e-generator crypto-bytes)
     (d-generator o-key)
     (displayln "You can Chat now.")
-    (handleIO in-in out name)))
+    (values in-in out)))
 
 (module* main #f
 
@@ -374,4 +374,4 @@
           (cond [(string-ci=? mode "Accept") (createListener port host)]
                 [else (createConnector host port)]))
         (displayln "Connect Successfully.")
-        (runParallel in out name)))))
+        (apply handleIO (runParallel in out) name)))))
