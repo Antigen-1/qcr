@@ -297,7 +297,7 @@
                                (else (apply message name syn (getTime)))))
                             out)
                            (flush-output out))
-            ((evt? syn) (custodian-shutdown-all (current-custodian))))
+            ((evt? syn) (custodian-shutdown-all (current-custodian)) (exit)))
       (loop)))
   (define (runParallel in out name)
     (define-values (in-in in-out) (make-pipe))
