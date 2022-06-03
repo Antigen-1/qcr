@@ -259,9 +259,9 @@
       (define bytes (port->bytes bytes-port))
       (if (bytes=? md5 (md5-bytes (open-input-bytes bytes))) (write-bytes bytes out) (error "Fail to verify."))
       (flush-output out)))
-  (define (handleIO in-in out name)
+  (define (handleIO in-in out name thd)
     (let loop ()
-      (define syn (sync in-in (read-line-evt)))
+      (define syn (sync in-in (read-line-evt) (thread-dead-evt thd)))
       (cond ((input-port? syn) (define port (open-output-bytes))
                                (copy-from-port syn port)
                                (displayln (handleInput (open-input-bytes (get-output-bytes port))))
@@ -296,11 +296,12 @@
                                 (apply link name (substring syn 5) (getTime)))
                                (else (apply message name syn (getTime)))))
                             out)
-                           (flush-output out)))
+                           (flush-output out))
+            ((evt? syn) (custodian-shutdown-all (current-custodian))))
       (loop)))
   (define (runParallel in out name)
     (define-values (in-in in-out) (make-pipe))
-    (thread (lambda () (copy-port in in-out) (exit)))
+    (define thd (thread (lambda () (copy-port in in-out))))
     (define m-public (file->bytes (build-path "keys" "key.pub.pem")))
     (write-bytes (string->bytes/utf-8 (~a (bytes-length m-public))) out)
     (write-byte 10 out)
@@ -330,7 +331,7 @@
     (flush-output out)
     (define o-name (read-line in-in))
     (displayln (format "You can Chat with ~a now." o-name))
-    in-in))
+    (values in-in thd)))
 
 (module* main #f
 
@@ -385,4 +386,5 @@
           (cond [(string-ci=? mode "Accept") (createListener port host)]
                 [else (createConnector host port)]))
         (displayln "Connect Successfully.")
-        (handleIO (runParallel in out name) out name)))))
+        (define-values (in-in thd) (runParallel in out name))
+        (handleIO in-in out name thd)))))
