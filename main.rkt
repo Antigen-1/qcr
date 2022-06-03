@@ -298,9 +298,9 @@
                             out)
                            (flush-output out)))
       (loop)))
-  (define (runParallel in out)
+  (define (runParallel in out name)
     (define-values (in-in in-out) (make-pipe))
-    (thread (lambda () (copy-port in in-out)))
+    (thread (lambda () (copy-port in in-out) (exit)))
     (define m-public (file->bytes (build-path "keys" "key.pub.pem")))
     (write-bytes (string->bytes/utf-8 (~a (bytes-length m-public))) out)
     (write-byte 10 out)
@@ -326,7 +326,9 @@
     (define o-key (RSA_private_decrypt (read-bytes (RSA_size m-private) in-in) m-private))
     (e-generator crypto-bytes)
     (d-generator o-key)
-    (displayln "You can Chat now.")
+    (displayln name out)
+    (define o-name (read-line in-in))
+    (displayln (format "You can Chat with ~a now." o-name))
     in-in))
 
 (module* main #f
@@ -382,4 +384,4 @@
           (cond [(string-ci=? mode "Accept") (createListener port host)]
                 [else (createConnector host port)]))
         (displayln "Connect Successfully.")
-        (handleIO (runParallel in out) out name)))))
+        (handleIO (runParallel in out name) out name)))))
