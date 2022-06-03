@@ -327,6 +327,7 @@
     (e-generator crypto-bytes)
     (d-generator o-key)
     (displayln name out)
+    (flush-output out)
     (define o-name (read-line in-in))
     (displayln (format "You can Chat with ~a now." o-name))
     in-in))
