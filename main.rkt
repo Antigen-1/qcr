@@ -327,7 +327,7 @@
     (e-generator crypto-bytes)
     (d-generator o-key)
     (displayln "You can Chat now.")
-    (values in-in out)))
+    in-in))
 
 (module* main #f
 
@@ -382,4 +382,4 @@
           (cond [(string-ci=? mode "Accept") (createListener port host)]
                 [else (createConnector host port)]))
         (displayln "Connect Successfully.")
-        (apply handleIO (runParallel in out) name)))))
+        (handleIO (runParallel in out) out name)))))
