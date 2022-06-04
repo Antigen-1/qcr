@@ -234,7 +234,7 @@
            (only-in openssl/md5 md5-bytes)
            (submod ".." crypto)
            (submod ".." extension))
-  (provide runParallel handleIO)
+  (provide runParallel handleIO copy-from-port copy-into-port)
 
   (define d-generator (make-parameter #f (lambda (sequence) (sequence->repeated-generator sequence))))
   (define e-generator (make-parameter #f (lambda (sequence) (sequence->repeated-generator sequence))))
