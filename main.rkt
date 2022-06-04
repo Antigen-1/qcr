@@ -327,6 +327,11 @@
     (define o-key (RSA_private_decrypt (read-bytes (RSA_size m-private) in-in) m-private))
     (e-generator crypto-bytes)
     (d-generator o-key)
+    (set! bio-pri #f)
+    (set! bio-pub #f)
+    (set! o-public #f)
+    (set! m-private #f)
+    (collect-garbage)
     (displayln name out)
     (flush-output out)
     (define o-name (read-line in-in))
@@ -370,6 +375,11 @@
                                  (RSA_generate_key_ex rsa (string->number k) e)
                                  (PEM_write_bio_RSAPrivateKey private rsa)
                                  (PEM_write_bio_RSAPublicKey public rsa)
+                                 (set! rsa #f)
+                                 (set! e #f)
+                                 (set! private #f)
+                                 (set! public #f)
+                                 (collect-garbage)
                                  (exit))))
 
   (begin
