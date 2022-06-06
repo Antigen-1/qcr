@@ -261,7 +261,7 @@
       (flush-output out)))
   (define (handleIO in-in out name thd)
     (let loop ()
-      (define syn (sync in-in (read-line-evt) (thread-dead-evt thd)))
+      (define syn (sync/enable-break in-in (read-line-evt) (thread-dead-evt thd)))
       (cond ((input-port? syn) (define port (open-output-bytes))
                                (copy-from-port syn port)
                                (displayln (handleInput (open-input-bytes (get-output-bytes port))))
