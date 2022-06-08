@@ -223,7 +223,7 @@
   (require (only-in racket/string string-prefix?)
            (only-in racket/file make-temporary-file display-to-file file->bytes)
            (only-in racket/date current-date)
-           (only-in racket/port copy-port port->bytes make-limited-input-port eof-evt)
+           (only-in racket/port copy-port port->bytes make-limited-input-port)
            (only-in racket/generator sequence->repeated-generator)
            (only-in file/zip zip->output)
            (only-in racket/random crypto-random-bytes)
@@ -259,11 +259,12 @@
   (define (handleIO in out name)
     (let loop ()
       (define syn (sync/enable-break in (read-line-evt)))
-      (cond ((eof-object? syn) (custodian-shutdown-all (current-custodian)) (exit))
-            ((input-port? syn) (define port (open-output-bytes))
-                               (copy-from-port syn port)
-                               (displayln (handleInput (open-input-bytes (get-output-bytes port))))
-                               (flush-output (current-output-port)))
+      (cond ((input-port? syn)
+             (with-handlers ((exn:fail:contract? (lambda (exn) (custodian-shutdown-all (current-custodian)) (exit))))
+               (define port (open-output-bytes))
+               (copy-from-port syn port)
+               (displayln (handleInput (open-input-bytes (get-output-bytes port))))
+               (flush-output (current-output-port))))
             ((string? syn) (copy-into-port
                             (handleInput
                              (cond
