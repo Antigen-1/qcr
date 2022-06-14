@@ -222,7 +222,7 @@
   (define-libcrypto RSA_free (_fun RSA_p -> _void))
   )
 
-(module* parallel #f
+(module* protocol #f
   (require (only-in racket/string string-prefix?)
            (only-in racket/file make-temporary-file display-to-file file->bytes)
            (only-in racket/date current-date)
@@ -337,10 +337,11 @@
 
   (require (submod ".." listener)
            (submod ".." connector)
-           (submod ".." parallel)
+           (submod ".." protocol)
            (submod ".." crypto)
            (only-in racket/file delete-directory/files)
            (only-in racket/cmdline command-line))
+  (provide mkRSATransport)
 
   (define cname (make-parameter #f))
   (define cmode (make-parameter "accept"))
