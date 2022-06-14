@@ -24,10 +24,13 @@
 ;; Code here
 
 (module* listener racket/base
-  (require (only-in racket/tcp tcp-listen tcp-accept/enable-break))
+  (require (only-in racket/tcp tcp-listen tcp-accept/enable-break tcp-close))
   (provide createListener)
   (define (createListener port [hostname #f])
-    (tcp-accept/enable-break (tcp-listen port 1 #f hostname))))
+    (let ((listener (tcp-listen port 1 #f hostname)))
+      (define-values (in out) (tcp-accept/enable-break listener))
+      (tcp-close listener)
+      (values in out))))
 
 (module* connector racket/base
   (require (only-in racket/tcp tcp-connect/enable-break))
