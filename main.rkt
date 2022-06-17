@@ -275,7 +275,7 @@
                                  ((string-prefix? syn "dir>")
                                   (define zip (make-temporary-file "rkt~a.zip"))
                                   (define path (resolve-path (substring syn 4)))
-                                  (with-handlers ((exn:fail:filesystem? (lambda (exn) (apply message name "error" (getTime)))))
+                                  (with-handlers ((exn:fail:filesystem? (lambda (exn) (displayln "Directory constructor : fail."))))
                                     (parameterize ((current-output-port (open-output-file zip #:exists 'truncate/replace))
                                                    (current-directory path))
                                       (zip->output
@@ -291,7 +291,7 @@
                                      #f)))
                                  ((string-prefix? syn "file>")
                                   (define path (resolve-path (substring syn 5)))
-                                  (with-handlers ((exn:fail:filesystem? (lambda (exn) (apply message name "error" (getTime)))))
+                                  (with-handlers ((exn:fail:filesystem? (lambda (exn) (displayln "File constructor : fail."))))
                                     (file (path->string (let-values (((base name bool) (split-path path)))
                                                           name))
                                           path #f)))
