@@ -260,8 +260,7 @@
       (if (bytes=? md5 (md5-bytes (open-input-bytes bytes))) (write-bytes bytes out) (error "Fail to verify."))
       (flush-output out)))
   (define (handleIO in out name)
-    (with-handlers ((exn:fail:contract? (lambda (exn) (custodian-shutdown-all (current-custodian))))
-                    (exn:fail:network? (lambda (exn) (custodian-shutdown-all (current-custodian)))))
+    (with-handlers ((exn:fail:contract? (lambda (exn) (raise (make-exn:fail:network)))))
       (let loop ()
         (define syn (sync/enable-break in (read-line-evt)))
         (cond ((input-port? syn)
@@ -386,7 +385,7 @@
     (define host (chost))
     (parameterize ([current-custodian (make-custodian)])
       (break-enabled #t)
-      (with-handlers (;[exn:fail? (lambda (exn) (custodian-shutdown-all (current-custodian)))]
+      (with-handlers ([exn:fail:network? (lambda (exn) (custodian-shutdown-all (current-custodian)))]
                       [exn:break? (lambda (exn) (custodian-shutdown-all (current-custodian)))])
         (define-values (in out)
           (cond [(string-ci=? mode "Accept") (createListener port host)]
