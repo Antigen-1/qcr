@@ -386,7 +386,8 @@
     (parameterize ([current-custodian (make-custodian)])
       (break-enabled #t)
       (with-handlers ([exn:break? (lambda (exn) (custodian-shutdown-all (current-custodian)))]
-                      [negative? (lambda (n) (custodian-shutdown-all (current-custodian)))])
+                      [negative? (lambda (n) (custodian-shutdown-all (current-custodian)))]
+                      [exn:fail:network? (lambda (exn) (custodian-shutdown-all (current-custodian)))])
         (define-values (in out)
           (cond [(string-ci=? mode "Accept") (createListener port host)]
                 [else (createConnector host port)]))
