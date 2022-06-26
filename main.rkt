@@ -156,26 +156,25 @@
 
   ;;TODO
 
-  (define-syntax (handleInput stx)
-    (syntax-case stx ()
-      ((_ object) #`(cond
-                      ;;TCP INPUT
-                      ((cond
-                         ((port->directory object))
-                         ((port->file object))
-                         ((port->link object))
-                         ((port->message object))
-                         (else #f))
-                       => structure-out)
-                      ;;CURRENT INPUT
-                      ((cond
-                         ((directory? object))
-                         ((file? object))
-                         ((link? object))
-                         ((message? object))
-                         (else #f))
-                       (structure->port object))
-                      (else object))))))
+  (define (handleInput object)
+    (cond
+      ;;TCP INPUT
+      ((cond
+         ((port->directory object))
+         ((port->file object))
+         ((port->link object))
+         ((port->message object))
+         (else #f))
+       => structure-out)
+      ;;CURRENT INPUT
+      ((cond
+         ((directory? object))
+         ((file? object))
+         ((link? object))
+         ((message? object))
+         (else #f))
+       (structure->port object))
+      (else object))))
 
 (module* crypto #f
   (require (only-in openssl/libcrypto libcrypto)
