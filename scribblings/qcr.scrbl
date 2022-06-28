@@ -7,4 +7,4 @@
 
 @defmodule[qcr]
 
-A small chat room for my friends.
+A small chat room on tcp protocol.
