@@ -352,10 +352,10 @@
            (only-in racket/cmdline command-line))
   (provide mkRSATransport)
 
-  (define cname (make-parameter #f))
-  (define cmode (make-parameter "accept"))
-  (define cport (make-parameter #f))
-  (define chost (make-parameter #f))
+  (define cname (make-parameter #f (lambda (v) (if (string? v) v (error "name : not a string.")))))
+  (define cmode (make-parameter "accept" (lambda (v) (if (string? v) v (error "mode : not a string.")))))
+  (define cport (make-parameter #f (lambda (v) (if (exact-nonnegative-integer? v) v (error "port : not a exact-nonnegative-integer")))))
+  (define chost (make-parameter #f (lambda (v) (if (string? v) v (error "host : not a string.")))))
 
   (define mkRSATransport
     (lambda (k)
