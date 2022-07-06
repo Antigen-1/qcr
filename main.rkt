@@ -263,46 +263,53 @@
       (if (bytes=? md5 (md5-bytes (open-input-bytes bytes))) (write-bytes bytes out) (error "Fail to verify."))
       (flush-output out)))
   (define (handleIO in out name)
-    (with-handlers ((exn:fail:contract? (lambda (exn) (raise -1))))
-      (let loop ()
-        (define syn (sync/enable-break in (read-line-evt)))
-        (cond ((input-port? syn)
-               (define port (open-output-bytes))
-               (copy-from-port syn port)
-               (displayln (handleInput (open-input-bytes (get-output-bytes port))))
-               (flush-output (current-output-port)))
-              ((string? syn) (copy-into-port
-                              (handleInput
-                               (cond
-                                 ((string-prefix? syn "dir>")
-                                  (define zip (make-temporary-file "rkt~a.zip"))
-                                  (define path (resolve-path (substring syn 4)))
-                                  (with-handlers ((exn:fail:filesystem? (lambda (exn) (error "Directory constructor : fail."))))
-                                    (parameterize ((current-output-port (open-output-file zip #:exists 'truncate/replace))
-                                                   (current-directory path))
-                                      (zip->output
-                                       (for/list
-                                           ((fn (in-directory))
-                                            #:when (not (directory-exists? fn)))
-                                         (resolve-path fn)))
-                                      (close-output-port (current-output-port)))
-                                    (directory
-                                     (path->string (let-values (((base name bool) (split-path path)))
-                                                     name))
-                                     zip
-                                     #f)))
-                                 ((string-prefix? syn "file>")
-                                  (define path (resolve-path (substring syn 5)))
-                                  (with-handlers ((exn:fail:filesystem? (lambda (exn) (error "File constructor : fail."))))
-                                    (file (path->string (let-values (((base name bool) (split-path path)))
-                                                          name))
-                                          path #f)))
-                                 ((string-prefix? syn "link>")
-                                  (apply link name (substring syn 5) (getTime)))
-                                 (else (apply message name syn (getTime)))))
-                              out)
-                             (flush-output out)))
-        (loop))))
+    (values
+     (thread
+      (lambda ()
+        (let loop ()
+          (define syn (sync/enable-break in))
+          (cond ((eof-object? (peek-byte syn)) (void))
+                (else
+                 (define port (open-output-bytes))
+                 (copy-from-port syn port)
+                 (displayln (handleInput (open-input-bytes (get-output-bytes port))))
+                 (flush-output (current-output-port))
+                 (loop))))))
+     (thread
+      (lambda ()
+        (let loop ()
+          (define syn (sync/enable-break (read-line-evt)))
+          (copy-into-port
+           (handleInput
+            (cond ((string-prefix? syn "dir>")
+                   (define zip (make-temporary-file "rkt~a.zip"))
+                   (define path (resolve-path (substring syn 4)))
+                   (with-handlers ((exn:fail:filesystem? (lambda (exn) (error "Directory constructor : fail."))))
+                     (parameterize ((current-output-port (open-output-file zip #:exists 'truncate/replace))
+                                    (current-directory path))
+                       (zip->output
+                        (for/list
+                            ((fn (in-directory))
+                             #:when (not (directory-exists? fn)))
+                          (resolve-path fn)))
+                       (close-output-port (current-output-port)))
+                     (directory
+                      (path->string (let-values (((base name bool) (split-path path)))
+                                      name))
+                      zip
+                      #f)))
+                  ((string-prefix? syn "file>")
+                   (define path (resolve-path (substring syn 5)))
+                   (with-handlers ((exn:fail:filesystem? (lambda (exn) (error "File constructor : fail."))))
+                     (file (path->string (let-values (((base name bool) (split-path path)))
+                                           name))
+                           path #f)))
+                  ((string-prefix? syn "link>")
+                   (apply link name (substring syn 5) (getTime)))
+                  (else (apply message name syn (getTime)))))
+           out)
+          (flush-output out)
+          (loop))))))
   (define (mkProtocol in out name)
     (define m-public (file->bytes (build-path "keys" "key.pub.pem")))
     (write-bytes (string->bytes/utf-8 (~a (bytes-length m-public))) out)
@@ -389,11 +396,13 @@
     (parameterize ([current-custodian (make-custodian)])
       (break-enabled #t)
       (with-handlers ([exn:break? (lambda (exn) (custodian-shutdown-all (current-custodian)))]
-                      [negative? (lambda (n) (custodian-shutdown-all (current-custodian)))]
+                      [zero? (lambda (n) (custodian-shutdown-all (current-custodian)))]
                       [exn:fail:network? (lambda (exn) (custodian-shutdown-all (current-custodian)))])
         (define-values (in out)
           (cond [(string-ci=? mode "Accept") (createListener port host)]
                 [else (createConnector host port)]))
         (displayln "Connect Successfully.")
         (mkProtocol in out name)
-        (handleIO in out name)))))
+        (define-values (thd1 thd2) (handleIO in out name))
+        (when (sync/enable-break (thread-dead-evt thd1) (thread-dead-evt thd2))
+          (raise 0))))))
