@@ -397,7 +397,7 @@
       (break-enabled #t)
       (with-handlers ([exn:break? (lambda (exn) (custodian-shutdown-all (current-custodian)))]
                       [exn:fail:network? (lambda (exn) (custodian-shutdown-all (current-custodian)))]
-                      [zero? (lambda (n) (custodian-shutdown-all (current-custodian)))])
+                      [symbol? (lambda (s) (custodian-shutdown-all (current-custodian)))])
         (define-values (in out)
           (cond [(string-ci=? mode "Accept") (createListener port host)]
                 [else (createConnector host port)]))
@@ -405,4 +405,4 @@
         (mkProtocol in out name)
         (define-values (thd1 thd2) (handleIO in out name))
         (when (sync/enable-break (thread-dead-evt thd1) (thread-dead-evt thd2))
-          (raise 0))))))
+          (raise 'dead))))))
