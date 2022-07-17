@@ -268,7 +268,7 @@
       (thread
        (lambda ()
          (let loop ()
-           (define syn (thread-receive (current-thread)))
+           (define syn (thread-receive))
            (if (input-port? syn)
                (cond ((eof-object? (peek-byte syn)) (void))
                      (else
