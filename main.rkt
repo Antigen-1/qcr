@@ -281,8 +281,8 @@
           (define syn (sync/enable-break (read-line-evt (current-input-port) 'any)))
           (copy-into-port
            (handleInput
-            (cond (((eof-object? syn) (break-thread (current-thread) 'terminate))
-                   (string-prefix? syn "dir>")
+            (cond ((eof-object? syn) (break-thread (current-thread) 'terminate))
+                  ((string-prefix? syn "dir>")
                    (define zip (make-temporary-file "rkt~a.zip"))
                    (define path (resolve-path (substring syn 4)))
                    (with-handlers ((exn:fail:filesystem? (lambda (exn) (error "Directory constructor : fail."))))
