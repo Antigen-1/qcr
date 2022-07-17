@@ -393,7 +393,8 @@
         命令基本格式：[type]>[content]
         type：file|dir|link
         content：如分享链接则为url，如分享文件、目录则为path
-        所有不符合命令格式的输入均被识别为普通消息予以发送"))
+        所有不符合命令格式的输入均被识别为普通消息予以发送"
+     "4.ctrl-c退出"))
 
   (begin
     (parseCmdln)
