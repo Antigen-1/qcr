@@ -281,7 +281,8 @@
           (define syn (sync/enable-break (read-line-evt (current-input-port) 'any)))
           (copy-into-port
            (handleInput
-            (cond ((string-prefix? syn "dir>")
+            (cond (((eof-object? syn) (break-thread (current-thread) 'terminate))
+                   (string-prefix? syn "dir>")
                    (define zip (make-temporary-file "rkt~a.zip"))
                    (define path (resolve-path (substring syn 4)))
                    (with-handlers ((exn:fail:filesystem? (lambda (exn) (error "Directory constructor : fail."))))
@@ -402,9 +403,7 @@
     (define host (chost))
     (parameterize ([current-custodian (make-custodian)])
       (break-enabled #t)
-      (with-handlers ([exn:break? (lambda (exn) (custodian-shutdown-all (current-custodian)))]
-                      [exn:fail:network? (lambda (exn) (custodian-shutdown-all (current-custodian)))]
-                      [symbol? (lambda (s) (custodian-shutdown-all (current-custodian)))])
+      (with-handlers ([exn:break? (lambda (exn) (custodian-shutdown-all (current-custodian)))])
         (define-values (in out)
           (cond [(string-ci=? mode "Accept") (createListener port host)]
                 [else (createConnector host port)]))
@@ -412,4 +411,4 @@
         (mkProtocol in out name)
         (define-values (thd1 thd2) (handleIO in out name))
         (when (sync/enable-break (thread-dead-evt thd1) (thread-dead-evt thd2))
-          (raise 'dead))))))
+          (custodian-shutdown-all (current-custodian)))))))
