@@ -279,38 +279,40 @@
       (lambda ()
         (let loop ()
           (define syn (sync (read-line-evt (current-input-port) 'any)))
-          (copy-into-port
-           (handleInput
-            (cond ((eof-object? syn) (break-thread (current-thread) 'terminate))
-                  ((string-prefix? syn "dir>")
-                   (define zip (make-temporary-file "rkt~a.zip"))
-                   (define path (resolve-path (substring syn 4)))
-                   (with-handlers ((exn:fail:filesystem? (lambda (exn) (error "Directory constructor : fail."))))
-                     (parameterize ((current-output-port (open-output-file zip #:exists 'truncate/replace))
-                                    (current-directory path))
-                       (zip->output
-                        (for/list
-                            ((fn (in-directory))
-                             #:when (not (directory-exists? fn)))
-                          (resolve-path fn)))
-                       (close-output-port (current-output-port)))
-                     (directory
-                      (path->string (let-values (((base name bool) (split-path path)))
-                                      name))
-                      zip
-                      #f)))
-                  ((string-prefix? syn "file>")
-                   (define path (resolve-path (substring syn 5)))
-                   (with-handlers ((exn:fail:filesystem? (lambda (exn) (error "File constructor : fail."))))
-                     (file (path->string (let-values (((base name bool) (split-path path)))
-                                           name))
-                           path #f)))
-                  ((string-prefix? syn "link>")
-                   (apply link name (substring syn 5) (getTime)))
-                  (else (apply message name syn (getTime)))))
-           out)
-          (flush-output out)
-          (loop))))))
+          (if (eof-object? syn) (void)
+              (begin
+                (copy-into-port
+                 (handleInput
+                  (cond
+                    ((string-prefix? syn "dir>")
+                     (define zip (make-temporary-file "rkt~a.zip"))
+                     (define path (resolve-path (substring syn 4)))
+                     (with-handlers ((exn:fail:filesystem? (lambda (exn) (error "Directory constructor : fail."))))
+                       (parameterize ((current-output-port (open-output-file zip #:exists 'truncate/replace))
+                                      (current-directory path))
+                         (zip->output
+                          (for/list
+                              ((fn (in-directory))
+                               #:when (not (directory-exists? fn)))
+                            (resolve-path fn)))
+                         (close-output-port (current-output-port)))
+                       (directory
+                        (path->string (let-values (((base name bool) (split-path path)))
+                                        name))
+                        zip
+                        #f)))
+                    ((string-prefix? syn "file>")
+                     (define path (resolve-path (substring syn 5)))
+                     (with-handlers ((exn:fail:filesystem? (lambda (exn) (error "File constructor : fail."))))
+                       (file (path->string (let-values (((base name bool) (split-path path)))
+                                             name))
+                             path #f)))
+                    ((string-prefix? syn "link>")
+                     (apply link name (substring syn 5) (getTime)))
+                    (else (apply message name syn (getTime)))))
+                 out)
+                (flush-output out)
+                (loop))))))))
   (define (mkProtocol in out name)
     (define m-public (file->bytes (build-path "keys" "key.pub.pem")))
     (write-bytes (string->bytes/utf-8 (~a (bytes-length m-public))) out)
