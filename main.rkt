@@ -267,7 +267,7 @@
      (thread
       (lambda ()
         (let loop ()
-          (define syn (sync/enable-break in))
+          (define syn (sync in))
           (cond ((eof-object? (peek-byte syn)) (void))
                 (else
                  (define port (open-output-bytes))
@@ -278,7 +278,7 @@
      (thread
       (lambda ()
         (let loop ()
-          (define syn (sync/enable-break (read-line-evt (current-input-port) 'any)))
+          (define syn (sync (read-line-evt (current-input-port) 'any)))
           (copy-into-port
            (handleInput
             (cond ((eof-object? syn) (break-thread (current-thread) 'terminate))
@@ -411,5 +411,5 @@
         (displayln "Connect Successfully.")
         (mkProtocol in out name)
         (define-values (thd1 thd2) (handleIO in out name))
-        (when (sync/enable-break (thread-dead-evt thd1) (thread-dead-evt thd2))
+        (when (sync (thread-dead-evt thd1) (thread-dead-evt thd2))
           (custodian-shutdown-all (current-custodian)))))))
