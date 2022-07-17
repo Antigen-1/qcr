@@ -375,6 +375,13 @@
   (define (parseCmdln)
     (command-line
      #:program "qcr"
+     #:usage-help "1.首次运行请使用 ./main +k [n] 生成指定大小的RSA公钥和私钥。
+2.connect模式下必须通过+h参数指定hostname，accept模式下此参数不必需。
+3.支持以命令方式进行文件、目录、链接的分享。
+        命令基本格式：[type]>[content]
+        type：file|dir|link
+        content：如分享链接则为url，如分享文件、目录则为path
+        所有不符合命令格式的输入均被识别为普通消息予以发送。"
      #:once-any (("+n" "++name") n "Your name" (cname n))
      #:once-any (("+m" "++mode") m "Current mode[accept/connect,default to accept]" (cmode m))
      #:once-any (("+p" "++port") p "Port number" (cport (string->number p)))
