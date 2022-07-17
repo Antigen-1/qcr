@@ -81,7 +81,7 @@
     #:methods gen:structure [(define (structure-out file)
                                (displayln (format "file:~a" (file-name file)))
                                (display "Download?[y/n]:")
-                               (cond [(string-ci=? (read-line) "y")
+                               (cond [(string-ci=? (read-line (current-input-port) 'any) "y")
                                       (with-handlers ((exn:fail:filesystem? (lambda (exn) (void))))
                                         (make-directory "file"))
                                       (call-with-output-file
@@ -112,7 +112,7 @@
                           (message-second link)
                           (message-timezone link)))
        (display "Redirect[y/n]:")
-       (cond ((string-ci=? "y" (read-line))
+       (cond ((string-ci=? "y" (read-line (current-input-port) 'any))
               ((dynamic-require 'browser/external 'send-url) url #t)
               "ok")
              (else (format "~a:cancelled" (message-content link)))))
@@ -135,7 +135,7 @@
     [(define (structure-out dir)
        (displayln (format "dir:~a" (file-name dir)))
        (display "Download?[y/n]:")
-       (cond [(string-ci=? (read-line) "y")
+       (cond [(string-ci=? (read-line (current-input-port) 'any) "y")
               (with-handlers ((exn:fail:filesystem? (lambda (exn) (void))))
                 (make-directory "file"))
               (call-with-output-file
