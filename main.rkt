@@ -278,7 +278,7 @@
      (thread
       (lambda ()
         (let loop ()
-          (define syn (sync/enable-break (read-line-evt (current-input-port))))
+          (define syn (sync/enable-break (read-line-evt (current-input-port) 'any)))
           (copy-into-port
            (handleInput
             (cond ((string-prefix? syn "dir>")
