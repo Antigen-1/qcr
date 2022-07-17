@@ -318,7 +318,7 @@
       (lambda ()
         (define sema-evt (semaphore-peek-evt sema))
         (let loop ()
-          (define r (sync in (wrap-evt sema-evt (lambda (b) (sync (read-line-evt (current-input-port) 'any) always-evt)))))
+          (define r (sync in (wrap-evt sema-evt (lambda (b) (sync (read-line-evt (current-input-port) 'any) (alarm-evt 1000))))))
           (if (evt? r) (void) (thread-send thd r))
           (loop)))))
     thd)
