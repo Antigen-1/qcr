@@ -263,6 +263,7 @@
       (if (bytes=? md5 (md5-bytes (open-input-bytes bytes))) (write-bytes bytes out) (error "Fail to verify."))
       (flush-output out)))
   (define (handleIO in out name)
+    (define sema (make-semaphore 1))
     (define thd
       (thread
        (lambda ()
@@ -278,6 +279,7 @@
                       (loop)))
                (if (eof-object? syn) (void)
                    (begin
+                     (semaphore-wait sema)
                      (copy-into-port
                       (handleInput
                        (cond
@@ -309,8 +311,16 @@
                          (else (apply message name syn (getTime)))))
                       out)
                      (flush-output out)
+                     (semaphore-post sema)
                      (loop))))))))
-    (void (thread (lambda () (let loop () (thread-send thd (sync in (read-line-evt (current-input-port) 'any))) (loop)))))
+    (void
+     (thread
+      (lambda ()
+        (define sema-evt (semaphore-peek-evt sema))
+        (let loop ()
+          (define r (sync in (wrap-evt sema-evt (lambda (b) (sync (read-line-evt (current-input-port) 'any) always-evt)))))
+          (if (evt? r) (void) (thread-send thd r))
+          (loop)))))
     thd)
   (define (mkProtocol in out name)
     (define m-public (file->bytes (build-path "keys" "key.pub.pem")))
