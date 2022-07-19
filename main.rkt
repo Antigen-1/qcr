@@ -61,13 +61,13 @@
                                                                      (message-second message)
                                                                      (message-timezone message)))
                              (define (structure->port message) (open-input-string
-                                                                (format "message\n~s"
+                                                                (format "message~s"
                                                                         (list (message-name message) (message-content message) (message-hour message)
                                                                               (message-minute message) (message-second message) (message-timezone message)))))])
   (define (port->message port)
     (with-handlers ((exn:fail:contract? (lambda (exn) #f)))
       (if (bytes=? #"message" (peek-bytes 7 0 port))
-          (begin (read-bytes-line port) (let ((list (read port))) (apply message list)))
+          (begin (read-bytes 7 port) (let ((list (read port))) (apply message list)))
           #f)))
 
   (struct file (name content port)
@@ -92,12 +92,12 @@
                                      [else "Cancelled"]))
                              (define (structure->port file) (input-port-append
                                                              #t
-                                                             (open-input-string (format "file\n~a\n" (file-name file)))
+                                                             (open-input-string (format "file~a\n" (file-name file)))
                                                              (file-port file)))])
   (define (port->file port)
     (with-handlers ((exn:fail:contract? (lambda (exn) #f)))
       (if (bytes=? #"file" (peek-bytes 4 0 port))
-          (begin (read-bytes-line port)
+          (begin (read-bytes 4 port)
                  (let ((name (bytes->string/utf-8 (read-bytes-line port)))) (file name (port->bytes port) #f)))
           #f)))
 
@@ -118,7 +118,7 @@
              (else (format "~a:cancelled" (message-content link)))))
      (define (structure->port link)
        (open-input-string
-        (format "link\n~s"
+        (format "link~s"
                 (list
                  (message-name link)
                  (message-content link)
@@ -128,7 +128,7 @@
                  (message-timezone link)))))])
   (define (port->link port)
     (with-handlers ((exn:fail:contract? (lambda (exn) #f)))
-      (if (bytes=? #"link" (peek-bytes 4 0 port)) (begin (read-bytes-line port) (apply link (read port))) #f)))
+      (if (bytes=? #"link" (peek-bytes 4 0 port)) (begin (read-bytes 4 port) (apply link (read port))) #f)))
 
   (struct directory file ()
     #:methods gen:structure
@@ -147,13 +147,13 @@
      (define (structure->port dir)
        (input-port-append
         #t
-        (open-input-string (format "dir\n~a\n" (file-name dir)))
+        (open-input-string (format "dir~a\n" (file-name dir)))
         (file-port dir)
         ))])
   (define (port->directory port)
     (with-handlers ((exn:fail:contract? (lambda (exn) #f)))
       (if (bytes=? #"dir" (peek-bytes 3 0 port))
-          (begin (read-bytes-line port)
+          (begin (read-bytes 3 port)
                  (let ((name (bytes->string/utf-8 (read-bytes-line port)))) (directory name (port->bytes port) #f)))
           #f)))
 
