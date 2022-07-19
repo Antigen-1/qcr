@@ -383,7 +383,7 @@
      #:once-any (("+p" "++port") p "Port number" (cport (string->number p)))
      #:once-any (("+h" "++host") h "Hostname[default to none]" (chost h))
      #:once-any (("+k" "++keys") k "Update rsa keys"
-                                 (if (directory-exists? "keys") (delete-directory "keys") (void))
+                                 (if (directory-exists? "keys") (delete-directory/files "keys") (void))
                                  (make-directory "keys")
                                  (parameterize ((current-directory "keys"))
                                    (mkRSATransport (string->number k)))
