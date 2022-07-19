@@ -30,3 +30,11 @@ CMakeFiles/CMakeTmp
 .vscode
 keys
 log.txt
+scribblings/qcr.html
+scribblings/manual-style.css
+scribblings/manual-racket.js
+scribblings/manual-racket.css
+scribblings/manual-fonts.css
+scribblings/racket.css
+scribblings/scribble-common.js
+scribblings/scribble.css
