@@ -42,147 +42,119 @@
     (tcp-connect/enable-break hostname port)))
 
 (module* extension #f
-  (require (for-syntax racket/base)
-           (only-in racket/file display-to-file)
-           (only-in racket/port input-port-append port->bytes)
-           (only-in racket/generic define-generics))
-  (provide (struct-out message) (struct-out file) (struct-out link) (struct-out directory) handleInput)
+  (require (only-in racket/date current-date)
+           (only-in racket/tcp tcp-port?)
+           (only-in racket/port input-port-append port->string copy-port)
+           (only-in racket/file make-temporary-file)
+           (only-in file/zip zip->output)
+           racket/class)
+  (provide processor% message-processor% link-processor% file-processor% directory-processor% handleInput)
 
-  (define-generics structure
-    (structure->port structure)
-    (structure-out structure))
+  (define (getTime)
+    (let ((date (current-date)))
+      (list (date-hour date) (date-minute date) (date-second date) (date*-time-zone-name date))))
 
-  (struct message (name content hour minute second timezone)
-    #:methods gen:structure [(define (structure-out message) (format "~a>:~a<~a:~a:~a,~a>"
-                                                                     (message-name message)
-                                                                     (message-content message)
-                                                                     (message-hour message)
-                                                                     (message-minute message)
-                                                                     (message-second message)
-                                                                     (message-timezone message)))
-                             (define (structure->port message) (open-input-string
-                                                                (format "message~s"
-                                                                        (list (message-name message) (message-content message) (message-hour message)
-                                                                              (message-minute message) (message-second message) (message-timezone message)))))])
-  (define (port->message port)
-    (with-handlers ((exn:fail:contract? (lambda (exn) #f)))
-      (if (bytes=? #"message" (peek-bytes 7 0 port))
-          (begin (read-bytes 7 port) (let ((list (read port))) (apply message list)))
-          #f)))
+  (define processor% (class object%
+                       (init port mode)
+                       (super-new)
+                       (define processor-mode mode)
+                       (define processor-port port)
+                       (define/pubment process
+                         (lambda () (inner (void) process processor-port processor-mode)))))
 
-  (struct file (name content port)
-    #:guard (lambda (name content port type-name)
-              (values name
-                      content
-                      (cond [(input-port? port) port]
-                            [(path? content) (open-input-file content)]
-                            [(or (string? content) (bytes? content)) #f]
-                            [else (error (format "~a error : port field" type-name))])))
-    #:methods gen:structure [(define (structure-out file)
-                               (displayln (format "file:~a" (file-name file)))
-                               (display "Download?[y/n]:")
+  (define message-processor%
+    (class processor%
+      (init port mode)
+      (super-new [port port] [mode mode])
+      (define process
+        (lambda (processor-port processor-mode)
+          (case processor-mode
+            ((make) (input-port-append #t (open-input-string ">>") processor-port (open-input-string (apply format "<~a:~a:~a,~a>" (getTime)))))
+            ((parse) (port->string processor-port)))))
+      (augment process)))
+
+  (define link-processor%
+    (class processor%
+      (init port mode)
+      (super-new [port port] [mode mode])
+      (define process
+        (lambda (processor-port processor-mode)
+          (case processor-mode
+            ((make) (read-string 5 processor-port)
+                    (open-input-string (format "~s" (cons (port->string processor-port) (getTime)))))
+            ((parse) (let ((data (read processor-port)))
+                       (displayln (apply format "link:~a<~a:~a:~a,~a>" data))
+                       (display "Redirect[y/n]:")
+                       (cond ((string-ci=? "y" (read-line (current-input-port) 'any))
+                              ((dynamic-require 'browser/external 'send-url) (car data) #t)
+                              "ok")
+                             (else (format "~a:cancelled" (car data)))))))))
+      (augment process)))
+
+  (define file-processor%
+    (class processor%
+      (init port mode)
+      (super-new [port port] [mode mode])
+      (define/public confirm (lambda (name processor-port)
                                (cond [(string-ci=? (read-line (current-input-port) 'any) "y")
-                                      (with-handlers ((exn:fail:filesystem? (lambda (exn) (void))))
-                                        (make-directory "file"))
+                                      (if (directory-exists? "file") (void) (make-directory "file"))
                                       (call-with-output-file
                                           #:exists 'truncate/replace
-                                        (build-path 'same "file" (file-name file))
-                                        (lambda (out) (write-bytes (file-content file) out)))
+                                        (build-path 'same "file" name)
+                                        (lambda (out) (copy-port processor-port out)))
                                       "Successful"]
-                                     [else "Cancelled"]))
-                             (define (structure->port file) (input-port-append
-                                                             #t
-                                                             (open-input-string (format "file~a\n" (file-name file)))
-                                                             (file-port file)))])
-  (define (port->file port)
-    (with-handlers ((exn:fail:contract? (lambda (exn) #f)))
-      (if (bytes=? #"file" (peek-bytes 4 0 port))
-          (begin (read-bytes 4 port)
-                 (let ((name (bytes->string/utf-8 (read-bytes-line port)))) (file name (port->bytes port) #f)))
-          #f)))
+                                     [else "Cancelled"])))
+      (define process
+        (lambda (processor-port processor-mode)
+          (case processor-mode
+            ((make) (read-string 5 processor-port)
+                    (define path-string (port->string processor-port))
+                    (let-values (((base name) (split-path path-string)))
+                      (input-port-append #t (open-input-string (format "~a\n" (path->string name))) (open-input-file path-string))))
+            ((parse) (let ((name (read-line processor-port)))
+                       (displayln (format "file:~a" name))
+                       (display "Download?[y/n]:")
+                       (confirm name processor-port))))))
+      (augride process)))
 
-  (struct link message ()
-    #:methods gen:structure
-    [(define (structure-out link)
-       (define url (message-content link))
-       (displayln (format "link:~a<~a:~a:~a,~a>"
-                          url
-                          (message-hour link)
-                          (message-minute link)
-                          (message-second link)
-                          (message-timezone link)))
-       (display "Redirect[y/n]:")
-       (cond ((string-ci=? "y" (read-line (current-input-port) 'any))
-              ((dynamic-require 'browser/external 'send-url) url #t)
-              "ok")
-             (else (format "~a:cancelled" (message-content link)))))
-     (define (structure->port link)
-       (open-input-string
-        (format "link~s"
-                (list
-                 (message-name link)
-                 (message-content link)
-                 (message-hour link)
-                 (message-minute link)
-                 (message-second link)
-                 (message-timezone link)))))])
-  (define (port->link port)
-    (with-handlers ((exn:fail:contract? (lambda (exn) #f)))
-      (if (bytes=? #"link" (peek-bytes 4 0 port)) (begin (read-bytes 4 port) (apply link (read port))) #f)))
-
-  (struct directory file ()
-    #:methods gen:structure
-    [(define (structure-out dir)
-       (displayln (format "dir:~a" (file-name dir)))
-       (display "Download?[y/n]:")
-       (cond [(string-ci=? (read-line (current-input-port) 'any) "y")
-              (with-handlers ((exn:fail:filesystem? (lambda (exn) (void))))
-                (make-directory "file"))
-              (call-with-output-file
-                  #:exists 'truncate/replace
-                (build-path 'same "file" (file-name dir))
-                (lambda (out) (write-bytes (file-content dir) out)))
-              "Successful"]
-             [else "Cancelled"]))
-     (define (structure->port dir)
-       (input-port-append
-        #t
-        (open-input-string (format "dir~a\n" (file-name dir)))
-        (file-port dir)
-        ))])
-  (define (port->directory port)
-    (with-handlers ((exn:fail:contract? (lambda (exn) #f)))
-      (if (bytes=? #"dir" (peek-bytes 3 0 port))
-          (begin (read-bytes 3 port)
-                 (let ((name (bytes->string/utf-8 (read-bytes-line port)))) (directory name (port->bytes port) #f)))
-          #f)))
+  (define directory-processor%
+    (class file-processor%
+      (init port mode)
+      (super-new [port port] [mode mode])
+      (inherit confirm)
+      (define process
+        (lambda (processor-port processor-mode)
+          (case processor-mode
+            ((make) (define tmp (make-temporary-file))
+                    (read-string 4 processor-port)
+                    (define path-string (port->string processor-port))
+                    (parameterize ((current-directory path-string))
+                      (call-with-output-file tmp #:exists 'truncate/replace
+                        (lambda (out)
+                          (zip->output
+                           (for/list ((file (in-directory)))
+                             file)
+                           out))))
+                    (let-values (((base name) (split-path path-string)))
+                      (input-port-append #t (open-input-string (format "~a\n" (path->string name))) (open-input-file tmp))))
+            ((parse) (let ((name (read-line processor-port)))
+                       (displayln (format "dir:~a" name))
+                       (display "Download?[y/n]:")
+                       (confirm name processor-port))))))
+      (override process)))
 
   ;;TODO
 
   (define (handleInput object)
-    (cond
-      ;;TCP INPUT
-      ((cond
-         ((port->directory object))
-         ((port->file object))
-         ((port->link object))
-         ((port->message object))
-         (else #f))
-       => structure-out)
-      ;;CURRENT INPUT
-      ((cond
-         ((directory? object))
-         ((file? object))
-         ((link? object))
-         ((message? object))
-         (else #f))
-       (structure->port object))
-      (else object))))
+    (case (if (tcp-port? object) (string->symbol (read-line object)) object)
+      ((message) message-processor%)
+      ((link) link-processor%)
+      ((file) file-processor%)
+      ((dir) directory-processor%))))
 
 (module* crypto #f
   (require (only-in openssl/libcrypto libcrypto)
            ffi/unsafe
-           (only-in racket/string string-split)
            (only-in ffi/unsafe/define define-ffi-definer))
   (provide (all-defined-out))
 
@@ -225,16 +197,14 @@
   )
 
 (module* protocol #f
-  (require (only-in racket/string string-prefix?)
-           (only-in racket/file make-temporary-file display-to-file file->bytes)
-           (only-in racket/date current-date)
+  (require (only-in racket/file make-temporary-file file->bytes)
            (only-in racket/port copy-port port->bytes make-limited-input-port)
            (only-in racket/generator sequence->repeated-generator)
-           (only-in file/zip zip->output)
            (only-in racket/random crypto-random-bytes)
            (only-in racket/format ~a)
            (only-in openssl/md5 md5-bytes)
            (only-in racket/port read-line-evt)
+           racket/class
            (submod ".." crypto)
            (submod ".." extension))
   (provide mkProtocol handleIO copy-from-port copy-into-port)
@@ -242,9 +212,6 @@
   (define d-generator (make-parameter #f (lambda (sequence) (sequence->repeated-generator sequence))))
   (define e-generator (make-parameter #f (lambda (sequence) (sequence->repeated-generator sequence))))
 
-  (define (getTime)
-    (let ((date (current-date)))
-      (list (date-hour date) (date-minute date) (date-second date) (date*-time-zone-name date))))
   (define (copy-into-port in out)
     (let ((bytes-string (port->bytes in)))
       (define data (bytes-append (md5-bytes (open-input-bytes bytes-string)) bytes-string))
@@ -262,6 +229,7 @@
       (define bytes (port->bytes bytes-port))
       (if (bytes=? md5 (md5-bytes (open-input-bytes bytes))) (write-bytes bytes out) (error "Fail to verify."))
       (flush-output out)))
+  (define <type>? (lambda (port type) (string=? (peek-string (add1 (string-length type)) 0 port) (string-append type ">"))))
   (define (handleIO in out name)
     (thread
      (lambda ()
@@ -270,48 +238,27 @@
           (handle-evt
            in
            (lambda (syn)
-             (cond ((eof-object? (peek-byte syn)) (void))
-                   (else
-                    (define port (open-output-bytes))
-                    (copy-from-port syn port)
-                    (displayln (handleInput (open-input-bytes (get-output-bytes port))))
-                    (loop)))))
+             (if (eof-object? (peek-byte syn)) (void)
+                 (let ((% (handleInput syn)))
+                   (define output (open-output-bytes))
+                   (copy-from-port syn output)
+                   (displayln (send (new % [port (open-input-bytes (get-output-bytes output))] [mode 'parse]) process))
+                   (loop)))))
           (handle-evt
            (read-line-evt (current-input-port) 'any)
            (lambda (syn)
              (if (eof-object? syn) (void)
-                 (begin
-                   (copy-into-port
-                    (handleInput
-                     (cond
-                       ((string-prefix? syn "dir>")
-                        (define zip (make-temporary-file "rkt~a.zip"))
-                        (define path (resolve-path (substring syn 4)))
-                        (with-handlers ((exn:fail:filesystem? (lambda (exn) (error "Directory constructor : fail."))))
-                          (parameterize ((current-output-port (open-output-file zip #:exists 'truncate/replace))
-                                         (current-directory path))
-                            (zip->output
-                             (for/list
-                                 ((fn (in-directory))
-                                  #:when (not (directory-exists? fn)))
-                               (resolve-path fn)))
-                            (close-output-port (current-output-port)))
-                          (directory
-                           (path->string (let-values (((base name bool) (split-path path)))
-                                           name))
-                           zip
-                           #f)))
-                       ((string-prefix? syn "file>")
-                        (define path (resolve-path (substring syn 5)))
-                        (with-handlers ((exn:fail:filesystem? (lambda (exn) (error "File constructor : fail."))))
-                          (file (path->string (let-values (((base name bool) (split-path path)))
-                                                name))
-                                path #f)))
-                       ((string-prefix? syn "link>")
-                        (apply link name (substring syn 5) (getTime)))
-                       (else (apply message name syn (getTime)))))
-                    out)
-                   (flush-output out)
+                 (let ((input (open-input-string syn)))
+                   (define type
+                     (cond ((findf (lambda (type) (<type>? input type)) (list "link" "file" "dir"))
+                            => (lambda (s) (string->symbol s)))
+                           (else 'message)))
+                   (displayln type out)
+                   (let ((% (handleInput type)))
+                     (define port (send (new % [port input] [mode 'make]) process))
+                     (copy-into-port port out)
+                     (flush-output out)
+                     (close-input-port port))
                    (loop))))))))))
   (define (mkProtocol in out name)
     (define m-public (file->bytes (build-path "keys" "key.pub.pem")))
