@@ -111,7 +111,7 @@
           (case processor-mode
             ((make) (read-string 5 processor-port)
                     (define path-string (port->string processor-port))
-                    (let-values (((base name) (split-path path-string)))
+                    (let-values (((base name bool) (split-path path-string)))
                       (input-port-append #t (open-input-string (format "~a\n" (path->string name))) (open-input-file path-string))))
             ((parse) (let ((name (read-line processor-port)))
                        (displayln (format "file:~a" name))
@@ -137,7 +137,7 @@
                            (for/list ((file (in-directory)))
                              file)
                            out))))
-                    (let-values (((base name) (split-path path-string)))
+                    (let-values (((base name bool) (split-path path-string)))
                       (input-port-append #t (open-input-string (format "~a\n" (path->string name))) (open-input-file tmp))))
             ((parse) (let ((name (read-line processor-port)))
                        (displayln (format "dir:~a" name))
