@@ -48,11 +48,13 @@
            (only-in racket/file make-temporary-file)
            (only-in file/zip zip->output)
            racket/class)
-  (provide processor% message-processor% link-processor% file-processor% directory-processor% handleInput)
+  (provide processor% message-processor% link-processor% file-processor% directory-processor% handleInput <type>?)
 
   (define (getTime)
     (let ((date (current-date)))
       (list (date-hour date) (date-minute date) (date-second date) (date*-time-zone-name date))))
+
+  (define <type>? (lambda (port type) (string=? (peek-string (add1 (string-length type)) 0 port) (string-append type ">"))))
 
   (define processor% (class object%
                        (init port mode)
@@ -229,7 +231,6 @@
       (define bytes (port->bytes bytes-port))
       (if (bytes=? md5 (md5-bytes (open-input-bytes bytes))) (write-bytes bytes out) (error "Fail to verify."))
       (flush-output out)))
-  (define <type>? (lambda (port type) (string=? (peek-string (add1 (string-length type)) 0 port) (string-append type ">"))))
   (define (handleIO in out name)
     (thread
      (lambda ()
